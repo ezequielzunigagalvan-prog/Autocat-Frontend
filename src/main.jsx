@@ -68,6 +68,8 @@ const CLIENT_TEMPLATES = {
     niche: "industrial",
     hours: "Lunes a viernes de 8:00 a 18:00",
     tone: "técnico, claro y profesional",
+    widgetInitialMessage: "Hola. Puedo ayudarte con servicios de filtración, lubricación industrial y solicitudes de cotización. Cuéntame qué servicio necesitas y en qué planta o ciudad se requiere.",
+    widgetPrompt: "Necesito cotizar filtración de aceite hidráulico",
     services: [
       { name: "Filtración de aceite hidráulico", durationMinutes: 60, price: 0, bufferMinutes: 10 },
       { name: "Filtración de aceite dieléctrico", durationMinutes: 60, price: 0, bufferMinutes: 10 },
@@ -88,6 +90,8 @@ const CLIENT_TEMPLATES = {
     niche: "servicios",
     hours: "Lunes a viernes de 9:00 a 18:00",
     tone: "amable, directo y comercial",
+    widgetInitialMessage: "Hola. Puedo ayudarte a registrar tu solicitud y preparar una cotización. Cuéntame qué servicio necesitas.",
+    widgetPrompt: "Quiero cotizar un servicio",
     services: [
       { name: "Cotización", durationMinutes: 30, price: 0, bufferMinutes: 10 },
       { name: "Visita técnica", durationMinutes: 60, price: 0, bufferMinutes: 10 },
@@ -105,6 +109,8 @@ const CLIENT_TEMPLATES = {
     niche: "salud",
     hours: "Lunes a viernes de 9:00 a 18:00",
     tone: "profesional, empático y claro",
+    widgetInitialMessage: "Hola. Puedo orientarte con información general y registrar tu solicitud para seguimiento del equipo.",
+    widgetPrompt: "Quiero información sobre una valoración",
     services: [
       { name: "Valoración", durationMinutes: 45, price: 0, bufferMinutes: 10 },
       { name: "Consulta", durationMinutes: 45, price: 0, bufferMinutes: 10 },
@@ -121,6 +127,8 @@ const CLIENT_TEMPLATES = {
     niche: "inmobiliaria",
     hours: "Lunes a sábado de 9:00 a 19:00",
     tone: "comercial, claro y orientado a calificar prospectos",
+    widgetInitialMessage: "Hola. Puedo ayudarte a encontrar, rentar, vender o agendar una visita. Cuéntame qué estás buscando.",
+    widgetPrompt: "Busco una propiedad en renta",
     services: [
       { name: "Comprar propiedad", durationMinutes: 45, price: 0, bufferMinutes: 10 },
       { name: "Rentar propiedad", durationMinutes: 45, price: 0, bufferMinutes: 10 },
@@ -137,6 +145,8 @@ const CLIENT_TEMPLATES = {
     niche: "educacion",
     hours: "Lunes a viernes de 9:00 a 18:00",
     tone: "claro, amable y orientado a inscripción",
+    widgetInitialMessage: "Hola. Puedo ayudarte con información de cursos, horarios, modalidad e inscripción.",
+    widgetPrompt: "Quiero información de un curso",
     services: [
       { name: "Información de cursos", durationMinutes: 30, price: 0, bufferMinutes: 10 },
       { name: "Inscripción", durationMinutes: 30, price: 0, bufferMinutes: 10 },
@@ -152,6 +162,8 @@ const CLIENT_TEMPLATES = {
     niche: "estetica",
     hours: "Lunes a sábado de 10:00 a 20:00",
     tone: "amable y profesional",
+    widgetInitialMessage: "Hola. Puedo ayudarte con servicios, horarios y solicitudes de cita.",
+    widgetPrompt: "Quiero agendar un servicio",
     services: [
       { name: "Servicio principal", durationMinutes: 45, price: 0, bufferMinutes: 10 },
       { name: "Valoración", durationMinutes: 30, price: 0, bufferMinutes: 10 }
@@ -619,6 +631,10 @@ function AdminApp() {
       address: selected.address || "",
       hours: selected.hours || "",
       tone: selected.tone || "",
+      widgetTitle: selected.widgetTitle || "Asistente",
+      widgetIntro: selected.widgetIntro || "Deja tus datos para responderte y dar seguimiento a tu solicitud.",
+      widgetInitialMessage: selected.widgetInitialMessage || "",
+      widgetPrompt: selected.widgetPrompt || "Quiero información sobre sus servicios",
       whatsappSender: selected.whatsappSender || "",
       whatsappProvider: selected.whatsappProvider || "none",
       metaPhoneNumberId: selected.metaPhoneNumberId || "",
@@ -731,6 +747,10 @@ function AdminApp() {
         niche: template.niche,
         hours: template.hours,
         tone: template.tone,
+        widgetTitle: "Asistente",
+        widgetIntro: "Deja tus datos y cuéntame qué servicio necesitas.",
+        widgetInitialMessage: template.widgetInitialMessage,
+        widgetPrompt: template.widgetPrompt,
         whatsappProvider: "none",
         services: template.services,
         faqs: template.faqs
@@ -992,7 +1012,7 @@ function AdminApp() {
     ["confirmed", "hold"].includes(appointment.status)
   );
   const selectedLead = inbox.find((customer) => customer.id === selectedLeadId) || inbox[0];
-  const widgetScript = `<script src="${API_URL}/public/widget.js" data-api-url="${API_URL}" data-business-id="${selected?.id || ""}"></script>`;
+  const widgetScript = `<script src="${API_URL}/public/widget.js?v=20260428b" data-api-url="${API_URL}" data-business-id="${selected?.id || ""}"></script>`;
   const publicLinks = [
     ["Landing general", LANDING_URL],
     ["Soluciones por proyecto", PROJECTS_URL],
@@ -1267,6 +1287,27 @@ function AdminApp() {
                 <span>Horario visible</span>
                 <input value={settingsForm.hours || ""} onChange={(event) => setSettingsForm((current) => ({ ...current, hours: event.target.value }))} />
                 <small className="field-help">Texto que responde el bot cuando preguntan horarios.</small>
+              </label>
+              <div className="form-section-title">Inicio del chat</div>
+              <label>
+                <span>Título del widget</span>
+                <input value={settingsForm.widgetTitle || ""} onChange={(event) => setSettingsForm((current) => ({ ...current, widgetTitle: event.target.value }))} placeholder="Asistente" />
+                <small className="field-help">Es el encabezado que ve el visitante al abrir el chat.</small>
+              </label>
+              <label>
+                <span>Texto antes de pedir datos</span>
+                <input value={settingsForm.widgetIntro || ""} onChange={(event) => setSettingsForm((current) => ({ ...current, widgetIntro: event.target.value }))} placeholder="Deja tus datos y cuéntame qué necesitas." />
+                <small className="field-help">Aclara por qué el visitante debe dejar nombre, teléfono y correo.</small>
+              </label>
+              <label className="full-row">
+                <span>Mensaje inicial del bot</span>
+                <textarea value={settingsForm.widgetInitialMessage || ""} onChange={(event) => setSettingsForm((current) => ({ ...current, widgetInitialMessage: event.target.value }))} placeholder="Hola. Puedo ayudarte con servicios y cotizaciones..." />
+                <small className="field-help">Este es el primer mensaje que responde el bot después de que el visitante deja sus datos.</small>
+              </label>
+              <label className="full-row">
+                <span>Ejemplo dentro del campo de mensaje</span>
+                <input value={settingsForm.widgetPrompt || ""} onChange={(event) => setSettingsForm((current) => ({ ...current, widgetPrompt: event.target.value }))} placeholder="Necesito cotizar filtración de aceite hidráulico" />
+                <small className="field-help">Texto de ejemplo que aparece listo para que el visitante lo envíe o lo cambie.</small>
               </label>
               <div className="form-section-title">Canales de atención</div>
               <label>
