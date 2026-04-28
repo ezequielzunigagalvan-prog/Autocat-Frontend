@@ -53,6 +53,15 @@ const LEAD_STATUSES = [
   ["cita_agendada", "Cita agendada"],
   ["perdido", "Perdidos"]
 ];
+const SEGMENT_OPTIONS = [
+  ["industrial", "Industrial / cotizaciones"],
+  ["servicios", "Servicios generales"],
+  ["salud", "Salud / consultorios"],
+  ["inmobiliaria", "Inmobiliaria"],
+  ["educacion", "Educación / cursos"],
+  ["estetica", "Citas / agenda"]
+];
+const QUOTE_SEGMENTS = ["industrial", "servicios", "proyectos", "inmobiliaria", "educacion"];
 const CLIENT_TEMPLATES = {
   industrial: {
     label: "Industrial / cotizaciones",
@@ -61,14 +70,17 @@ const CLIENT_TEMPLATES = {
     tone: "técnico, claro y profesional",
     services: [
       { name: "Filtración de aceite hidráulico", durationMinutes: 60, price: 0, bufferMinutes: 10 },
+      { name: "Filtración de aceite dieléctrico", durationMinutes: 60, price: 0, bufferMinutes: 10 },
       { name: "Lubricación industrial", durationMinutes: 60, price: 0, bufferMinutes: 10 },
       { name: "Análisis de aceite", durationMinutes: 45, price: 0, bufferMinutes: 10 },
+      { name: "Flushing o limpieza de sistema", durationMinutes: 60, price: 0, bufferMinutes: 10 },
       { name: "Cotización de servicio en planta", durationMinutes: 60, price: 0, bufferMinutes: 10 }
     ],
     faqs: [
-      { question: "¿Qué datos necesitan para cotizar?", answer: "Empresa, ubicación, servicio requerido, tipo de equipo, capacidad aproximada y urgencia." },
-      { question: "¿Atienden servicios en planta?", answer: "Sí. El asistente captura ubicación y datos técnicos para preparar la cotización." },
-      { question: "¿Pueden atender urgencias?", answer: "El asistente marca la solicitud como prioritaria para seguimiento humano." }
+      { question: "¿Qué datos necesitan para cotizar?", answer: "Empresa, ubicación, servicio requerido, tipo de equipo, capacidad aproximada en litros, condición actual del fluido y urgencia." },
+      { question: "¿Pueden dar precio inmediato?", answer: "No siempre. El precio depende del equipo, volumen, ubicación, condición del aceite, accesos y alcance del servicio." },
+      { question: "¿Atienden servicios en planta?", answer: "Sí. El asistente captura ubicación, contacto, datos técnicos y urgencia para preparar la cotización." },
+      { question: "¿Pueden atender urgencias?", answer: "El asistente marca la solicitud como prioritaria para que el equipo la revise rápido." }
     ]
   },
   servicios: {
@@ -79,11 +91,60 @@ const CLIENT_TEMPLATES = {
     services: [
       { name: "Cotización", durationMinutes: 30, price: 0, bufferMinutes: 10 },
       { name: "Visita técnica", durationMinutes: 60, price: 0, bufferMinutes: 10 },
+      { name: "Diagnóstico del proyecto", durationMinutes: 45, price: 0, bufferMinutes: 10 },
       { name: "Seguimiento comercial", durationMinutes: 30, price: 0, bufferMinutes: 10 }
     ],
     faqs: [
-      { question: "¿Cómo solicito una cotización?", answer: "Comparte nombre, teléfono, servicio, ubicación y detalles del proyecto." },
-      { question: "¿Cuándo me contactan?", answer: "El equipo revisa la solicitud y da seguimiento con la información capturada." }
+      { question: "¿Cómo solicito una cotización?", answer: "Comparte nombre, teléfono, servicio, ubicación, alcance del proyecto y fecha tentativa." },
+      { question: "¿Cuándo me contactan?", answer: "El equipo revisa la solicitud y da seguimiento con la información capturada." },
+      { question: "¿El precio es fijo?", answer: "Depende del alcance. El asistente recopila datos para preparar una propuesta adecuada." }
+    ]
+  },
+  salud: {
+    label: "Salud / consultorios",
+    niche: "salud",
+    hours: "Lunes a viernes de 9:00 a 18:00",
+    tone: "profesional, empático y claro",
+    services: [
+      { name: "Valoración", durationMinutes: 45, price: 0, bufferMinutes: 10 },
+      { name: "Consulta", durationMinutes: 45, price: 0, bufferMinutes: 10 },
+      { name: "Urgencia o caso prioritario", durationMinutes: 45, price: 0, bufferMinutes: 10 }
+    ],
+    faqs: [
+      { question: "¿El asistente diagnostica?", answer: "No. Solo brinda información general y captura la solicitud para que el equipo dé seguimiento." },
+      { question: "¿Qué datos pide?", answer: "Nombre, teléfono, motivo de consulta, horario preferido y si es urgente." },
+      { question: "¿Puede priorizar urgencias?", answer: "Sí. Puede marcar casos urgentes para atención humana." }
+    ]
+  },
+  inmobiliaria: {
+    label: "Inmobiliaria",
+    niche: "inmobiliaria",
+    hours: "Lunes a sábado de 9:00 a 19:00",
+    tone: "comercial, claro y orientado a calificar prospectos",
+    services: [
+      { name: "Comprar propiedad", durationMinutes: 45, price: 0, bufferMinutes: 10 },
+      { name: "Rentar propiedad", durationMinutes: 45, price: 0, bufferMinutes: 10 },
+      { name: "Vender propiedad", durationMinutes: 45, price: 0, bufferMinutes: 10 },
+      { name: "Agendar visita", durationMinutes: 45, price: 0, bufferMinutes: 10 }
+    ],
+    faqs: [
+      { question: "¿Qué datos pide para compradores?", answer: "Zona, presupuesto, tipo de propiedad, forma de pago y fecha tentativa." },
+      { question: "¿Puede agendar visitas?", answer: "Puede capturar horario preferido y datos del prospecto para confirmación." }
+    ]
+  },
+  educacion: {
+    label: "Educación / cursos",
+    niche: "educacion",
+    hours: "Lunes a viernes de 9:00 a 18:00",
+    tone: "claro, amable y orientado a inscripción",
+    services: [
+      { name: "Información de cursos", durationMinutes: 30, price: 0, bufferMinutes: 10 },
+      { name: "Inscripción", durationMinutes: 30, price: 0, bufferMinutes: 10 },
+      { name: "Asesoría académica", durationMinutes: 45, price: 0, bufferMinutes: 10 }
+    ],
+    faqs: [
+      { question: "¿Qué datos pide para informes?", answer: "Nombre, teléfono, curso de interés, modalidad, horario preferido y fecha de inicio." },
+      { question: "¿Puede filtrar interesados?", answer: "Sí. Captura curso, presupuesto, modalidad y nivel de interés." }
     ]
   },
   citas: {
@@ -462,6 +523,7 @@ function AdminApp() {
     () => businesses.find((business) => business.id === selectedId) || businesses[0],
     [businesses, selectedId]
   );
+  const selectedIsQuoteBased = QUOTE_SEGMENTS.includes(settingsForm.niche || selected?.niche);
 
   function authHeaders(extra = {}) {
     return { ...extra, Authorization: `Bearer ${token}` };
@@ -552,6 +614,7 @@ function AdminApp() {
     if (!selected) return;
     setSettingsForm({
       name: selected.name || "",
+      niche: selected.niche || "servicios",
       phone: selected.phone || "",
       address: selected.address || "",
       hours: selected.hours || "",
@@ -1185,6 +1248,13 @@ function AdminApp() {
                 <small className="field-help">Aparece en respuestas del bot, panel y mensajes de confirmación.</small>
               </label>
               <label>
+                <span>Segmento del cliente</span>
+                <select value={settingsForm.niche || "servicios"} onChange={(event) => setSettingsForm((current) => ({ ...current, niche: event.target.value }))}>
+                  {SEGMENT_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                </select>
+                <small className="field-help">Define si el bot debe operar como agenda, cotizador, capturador de prospectos o atención inicial.</small>
+              </label>
+              <label>
                 <span>Teléfono</span>
                 <input value={settingsForm.phone || ""} onChange={(event) => setSettingsForm((current) => ({ ...current, phone: event.target.value }))} />
               </label>
@@ -1297,7 +1367,7 @@ function AdminApp() {
             </form>
 
             <h3>Servicios que puede ofrecer el bot</h3>
-            <p className="panel-copy">Cada servicio define precio, duración y margen de agenda. El cliente puede pedirlo por nombre o número.</p>
+            <p className="panel-copy">{selectedIsQuoteBased ? "En este segmento los servicios se usan para clasificar y cotizar. Precio y duración son internos/opcionales; el bot no los mostrará como definitivos." : "Cada servicio define precio, duración y margen de agenda. El cliente puede pedirlo por nombre o número."}</p>
             <form className="service-form" onSubmit={saveService}>
               <label>
                 <span>Nombre del servicio</span>
@@ -1308,7 +1378,7 @@ function AdminApp() {
                 />
               </label>
               <label>
-                <span>Duración</span>
+                <span>{selectedIsQuoteBased ? "Duración interna opcional" : "Duración"}</span>
                 <div className="unit-input">
                   <input
                     type="number"
@@ -1320,7 +1390,7 @@ function AdminApp() {
                 </div>
               </label>
               <label>
-                <span>Precio</span>
+                <span>{selectedIsQuoteBased ? "Precio base opcional" : "Precio"}</span>
                 <div className="unit-input">
                   <input
                     type="number"
@@ -1332,7 +1402,7 @@ function AdminApp() {
                 </div>
               </label>
               <label>
-                <span>Margen después del servicio</span>
+                <span>{selectedIsQuoteBased ? "Margen interno" : "Margen después del servicio"}</span>
                 <div className="unit-input">
                   <input
                     type="number"
@@ -1357,7 +1427,7 @@ function AdminApp() {
               {selected?.services?.map((service) => (
                 <article key={service.id}>
                   <strong>{service.name}</strong>
-                  <span>{service.durationMinutes} min, ${service.price}, margen {service.bufferMinutes ?? selected.defaultBufferMinutes} min</span>
+                  <span>{selectedIsQuoteBased ? "Por cotizar según condiciones del cliente" : `${service.durationMinutes} min, $${service.price}, margen ${service.bufferMinutes ?? selected.defaultBufferMinutes} min`}</span>
                   <div className="mini-actions">
                     <button type="button" onClick={() => editService(service)}>Editar</button>
                     <button type="button" onClick={() => toggleService(service)}>{service.active ? "Desactivar" : "Activar"}</button>
