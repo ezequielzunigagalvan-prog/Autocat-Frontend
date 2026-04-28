@@ -193,13 +193,27 @@ function PublicWidget({ businessId }) {
     setFrom("");
   }, [businessId]);
 
+  function resetPublicWidget() {
+    setLeadForm({ name: defaults.name, phone: defaults.phone, email: defaults.email });
+    setMessageText(defaults.prompt);
+    setMessages([]);
+    setLeadReady(false);
+    setFrom("");
+    setLeadError("");
+  }
+
+  function closePublicWidget() {
+    setIsOpen(false);
+    resetPublicWidget();
+  }
+
   useEffect(() => {
-    window.AutoChatWidget = { open: () => setIsOpen(true), close: () => setIsOpen(false) };
+    window.AutoChatWidget = { open: () => setIsOpen(true), close: closePublicWidget };
     const openHandler = () => setIsOpen(true);
     window.addEventListener("autochat:open", openHandler);
     if (window.location.hash === "#chat") setIsOpen(true);
     return () => window.removeEventListener("autochat:open", openHandler);
-  }, []);
+  }, [defaults]);
 
   async function startChat(event) {
     event.preventDefault();
@@ -250,7 +264,7 @@ function PublicWidget({ businessId }) {
     <div className="react-widget-root">
       {!isOpen && <button className="react-widget-toggle" type="button" onClick={() => setIsOpen(true)}>Chat</button>}
       {isOpen && <section className="react-widget-panel" id="chat">
-        <header><span>Asistente</span><button type="button" onClick={() => setIsOpen(false)}>x</button></header>
+        <header><span>Asistente</span><button type="button" onClick={closePublicWidget}>x</button></header>
         {!leadReady ? (
           <form className="react-widget-lead" onSubmit={startChat}>
             <strong>{businessId === "demo_proyectos" ? "Recibe un diagnóstico de tu negocio" : "Prueba esta demo"}</strong>
