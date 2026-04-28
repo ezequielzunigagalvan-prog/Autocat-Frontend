@@ -26,6 +26,8 @@ import "./styles.css";
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
 const PUBLIC_APP_URL = (import.meta.env.VITE_PUBLIC_APP_URL || API_URL).replace(/\/$/, "");
 const FRONTEND_URL = window.location.origin;
+const DEMO_BARBERIA_URL = `${PUBLIC_APP_URL}/demo-barberia.html`;
+const DEMO_DENTAL_URL = `${PUBLIC_APP_URL}/demo-dental.html`;
 const LEAD_STATUSES = [
   ["all", "Todos"],
   ["nuevo", "Nuevos"],
@@ -166,7 +168,7 @@ function LandingPage() {
       </section>
       <section className="public-section" id="soluciones"><div className="public-inner"><h2>Tu negocio no necesita otro formulario abandonado</h2><p className="public-lead">AutoChat se implementa por proyecto. Analizamos qué preguntas recibe tu negocio, qué datos necesita capturar y cómo debe avanzar cada oportunidad.</p><div className="public-grid three"><article><strong>Captura de clientes</strong><span>Nombre, teléfono, correo y contexto de la solicitud desde el primer contacto.</span></article><article><strong>Respuestas automáticas</strong><span>Servicios, precios, horarios, ubicación, políticas y preguntas frecuentes.</span></article><article><strong>Seguimiento comercial</strong><span>Panel de leads con estados, notas internas y conversación completa.</span></article></div></div></section>
       <section className="public-section public-band"><div className="public-inner public-split"><div><h2>Un canal propio, sin depender de WhatsApp API</h2><p className="public-lead">El asistente vive en la página del cliente. WhatsApp oficial puede agregarse después como fase premium, pero el proyecto puede venderse y operar desde web desde el día uno.</p><a className="public-button" href="/proyectos">Ver proceso de trabajo</a></div><div className="public-preview" aria-label="Vista previa del asistente"><header><span></span><span></span><span></span></header><div className="preview-lines"><b></b><i></i><i></i><i></i></div><div className="preview-chat"><strong>Asistente</strong><span></span><span></span><span></span></div></div></div></section>
-      <section className="public-section" id="demos"><div className="public-inner"><h2>Demos como ejemplos, no como límite</h2><p className="public-lead">Estas demos muestran distintos tonos y flujos. El asistente se adapta a cualquier negocio que necesite responder, filtrar y dar seguimiento.</p><div className="public-grid three"><article><strong>Barbería / estética</strong><span>Servicios, precios, horarios y solicitudes de cita como ejemplo comercial.</span><a className="public-button" href="/demo-barberia">Ver demo</a></article><article><strong>Clínica dental</strong><span>Valoración, limpieza, urgencias y captura de paciente con tono profesional.</span><a className="public-button" href="/demo-dental">Ver demo</a></article><article><strong>Proyecto personalizado</strong><span>Talleres, consultorios, inmobiliarias, cursos, despachos, servicios técnicos y más.</span><a className="public-button" href="/proyectos">Ver proyectos</a></article></div></div></section>
+      <section className="public-section" id="demos"><div className="public-inner"><h2>Demos como ejemplos, no como límite</h2><p className="public-lead">Estas demos muestran distintos tonos y flujos. El asistente se adapta a cualquier negocio que necesite responder, filtrar y dar seguimiento.</p><div className="public-grid three"><article><strong>Barbería / estética</strong><span>Servicios, precios, horarios y solicitudes de cita como ejemplo comercial.</span><a className="public-button" href={DEMO_BARBERIA_URL}>Ver demo</a></article><article><strong>Clínica dental</strong><span>Valoración, limpieza, urgencias y captura de paciente con tono profesional.</span><a className="public-button" href={DEMO_DENTAL_URL}>Ver demo</a></article><article><strong>Proyecto personalizado</strong><span>Talleres, consultorios, inmobiliarias, cursos, despachos, servicios técnicos y más.</span><a className="public-button" href="/proyectos">Ver proyectos</a></article></div></div></section>
       <section className="public-section" id="paquetes"><div className="public-inner"><h2>Implementación por proyecto</h2><p className="public-lead">El precio depende del flujo, contenido y nivel de personalización. La idea es empezar ligero y crecer cuando el canal demuestre valor.</p><div className="public-grid three price-grid"><article><strong>Proyecto inicial</strong><b>$2,500+</b><span>Widget web, flujo conversacional, captura de leads y panel de seguimiento.</span></article><article><strong>Proyecto avanzado</strong><b>$6,000+</b><span>Landing personalizada, FAQs, reglas de negocio, agenda o cotización.</span></article><article><strong>Mantenimiento</strong><b>$500+</b><span>Hosting básico, soporte, ajustes menores y mejoras del flujo.</span></article></div></div></section>
       <section className="public-section public-cta" id="contacto"><div className="public-inner"><h2>Solicita un diagnóstico del flujo</h2><p className="public-lead">Abre el chat, deja tus datos y cuéntanos qué proceso quieres automatizar en tu página.</p><a className="public-button" href="/proyectos">Ver soluciones por proyecto</a></div></section>
       <PublicFooter />
@@ -703,8 +705,8 @@ function AdminApp() {
   const publicLinks = [
     ["Landing general", `${FRONTEND_URL}/`],
     ["Soluciones por proyecto", `${FRONTEND_URL}/proyectos`],
-    ["Demo barbería", `${PUBLIC_APP_URL}/public/demo-barberia.html`],
-    ["Demo dental", `${FRONTEND_URL}/demo-dental`],
+    ["Demo barbería", DEMO_BARBERIA_URL],
+    ["Demo dental", DEMO_DENTAL_URL],
     ["Panel admin", `${FRONTEND_URL}/admin`]
   ];
   useEffect(() => {
