@@ -133,7 +133,7 @@ function PublicNav({ compact = false }) {
       <a className="public-brand" href={LANDING_URL}>AutoChat Web</a>
       <div className="public-links">
         <a href={PROJECTS_URL}>Proyectos</a>
-        <a href="/#demos">Demos</a>
+        <a href={`${LANDING_URL}#demos`}>Demos</a>
         <a href={ADMIN_URL}>Panel</a>
         {!compact && <a className="public-button" href="#contacto">Solicitar diagnóstico</a>}
       </div>
@@ -141,32 +141,137 @@ function PublicNav({ compact = false }) {
   );
 }
 
+const widgetDefaults = {
+  demo_barberia: {
+    name: "Cliente Barbería",
+    phone: "+525551111111",
+    email: "cliente@demo.com",
+    prompt: "Quiero un corte clásico mañana por la tarde",
+    hello: "Hola. Soy el asistente de la barbería demo. Puedo ayudarte con servicios, precios, horarios y solicitudes de cita."
+  },
+  demo_dental: {
+    name: "Paciente Demo",
+    phone: "+525552222222",
+    email: "paciente@demo.com",
+    prompt: "Quiero una valoración dental esta semana",
+    hello: "Hola. Soy el asistente de la clínica dental demo. Puedo orientarte con tratamientos, horarios y solicitudes de cita."
+  },
+  demo_proyectos: {
+    name: "Alejandro",
+    phone: "+525553333333",
+    email: "contacto@negocio.com",
+    prompt: "Tengo una estética, atiendo lunes a sábado, hago uñas y faciales, quiero capturar nombre, WhatsApp, servicio y horario.",
+    hello: "Hola. Para preparar tu diagnóstico, cuéntame qué negocio tienes, tus servicios, horarios, qué datos necesitas pedir y qué quieres automatizar."
+  }
+};
+
 function PublicWidget({ businessId }) {
+  const defaults = widgetDefaults[businessId] || widgetDefaults.demo_proyectos;
+  const [isOpen, setIsOpen] = useState(() => window.location.hash === "#chat");
+  const [leadReady, setLeadReady] = useState(false);
+  const [from, setFrom] = useState("");
+  const [leadError, setLeadError] = useState("");
+  const [leadForm, setLeadForm] = useState({ name: defaults.name, phone: defaults.phone, email: defaults.email });
+  const [messageText, setMessageText] = useState(defaults.prompt);
+  const [messages, setMessages] = useState([]);
+
   useEffect(() => {
-    const existing = document.querySelector("script[data-autochat-public-widget]");
-    if (existing) existing.remove();
-    document.querySelector("#ac-toggle")?.parentElement?.remove();
-    const script = document.createElement("script");
-    script.src = API_URL + "/public/widget.js";
-    script.dataset.apiUrl = API_URL;
-    script.dataset.businessId = businessId;
-    script.dataset.autochatPublicWidget = "true";
-    document.body.appendChild(script);
-    return () => {
-      script.remove();
-      document.querySelector("#ac-toggle")?.parentElement?.remove();
-    };
+    setLeadForm({ name: defaults.name, phone: defaults.phone, email: defaults.email });
+    setMessageText(defaults.prompt);
+    setMessages([]);
+    setLeadReady(false);
+    setFrom("");
   }, [businessId]);
-  return null;
+
+  useEffect(() => {
+    window.AutoChatWidget = { open: () => setIsOpen(true), close: () => setIsOpen(false) };
+    const openHandler = () => setIsOpen(true);
+    window.addEventListener("autochat:open", openHandler);
+    if (window.location.hash === "#chat") setIsOpen(true);
+    return () => window.removeEventListener("autochat:open", openHandler);
+  }, []);
+
+  async function startChat(event) {
+    event.preventDefault();
+    setLeadError("");
+    try {
+      const response = await fetch(API_URL + "/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          businessId,
+          name: leadForm.name,
+          phone: leadForm.phone,
+          email: leadForm.email,
+          source: "widget_web",
+          notes: "Lead capturado desde widget web"
+        })
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "No se pudo iniciar el chat.");
+      setFrom(body.from);
+      setLeadReady(true);
+      setMessages([{ who: "bot", text: defaults.hello }]);
+    } catch (error) {
+      setLeadError(error.message || "No se pudo iniciar el chat.");
+    }
+  }
+
+  async function sendWidgetMessage(event) {
+    event.preventDefault();
+    const text = messageText.trim();
+    if (!text || !from) return;
+    setMessageText("");
+    setMessages((current) => [...current, { who: "me", text }]);
+    try {
+      const response = await fetch(API_URL + "/api/conversations/message", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ businessId, from, text })
+      });
+      const body = await response.json();
+      setMessages((current) => [...current, { who: "bot", text: body.outboundText || "No pude responder en este momento." }]);
+    } catch {
+      setMessages((current) => [...current, { who: "bot", text: "No pude conectar con el asistente. Intenta de nuevo en un momento." }]);
+    }
+  }
+
+  return (
+    <div className="react-widget-root">
+      {!isOpen && <button className="react-widget-toggle" type="button" onClick={() => setIsOpen(true)}>Chat</button>}
+      {isOpen && <section className="react-widget-panel" id="chat">
+        <header><span>Asistente</span><button type="button" onClick={() => setIsOpen(false)}>x</button></header>
+        {!leadReady ? (
+          <form className="react-widget-lead" onSubmit={startChat}>
+            <strong>{businessId === "demo_proyectos" ? "Recibe un diagnóstico de tu negocio" : "Prueba esta demo"}</strong>
+            <span>{businessId === "demo_proyectos" ? "Deja tus datos y cuéntame tu proyecto para generar un ejemplo." : "Los campos vienen llenos para que puedas probar rápido."}</span>
+            <input value={leadForm.name} onChange={(event) => setLeadForm((current) => ({ ...current, name: event.target.value }))} placeholder="Nombre" required />
+            <input value={leadForm.phone} onChange={(event) => setLeadForm((current) => ({ ...current, phone: event.target.value }))} placeholder="Teléfono / WhatsApp" required />
+            <input value={leadForm.email} onChange={(event) => setLeadForm((current) => ({ ...current, email: event.target.value }))} placeholder="Correo opcional" type="email" />
+            <button type="submit">Iniciar chat</button>
+            {leadError && <small>{leadError}</small>}
+          </form>
+        ) : (
+          <>
+            <div className="react-widget-messages">
+              {messages.map((item, index) => <p key={index} className={item.who === "me" ? "me" : "bot"}>{item.text}</p>)}
+            </div>
+            <form className="react-widget-form" onSubmit={sendWidgetMessage}>
+              <input value={messageText} onChange={(event) => setMessageText(event.target.value)} placeholder="Escribe..." />
+              <button type="submit">Ir</button>
+            </form>
+          </>
+        )}
+      </section>}
+    </div>
+  );
 }
 
 function openPublicChat(event) {
   event.preventDefault();
-  if (window.AutoChatWidget?.open) {
-    window.AutoChatWidget.open();
-    return;
-  }
   window.location.hash = "chat";
+  window.dispatchEvent(new Event("autochat:open"));
+  window.AutoChatWidget?.open?.();
 }
 
 function LandingPage() {
@@ -181,7 +286,7 @@ function LandingPage() {
           <div className="public-actions"><a className="public-button" href={PROJECTS_URL}>Ver cómo funciona</a><a className="public-button secondary" href="#demos">Ver demos</a></div>
         </div>
       </section>
-      <section className="public-section diagnosis-section" id="diagnostico"><div className="public-inner diagnosis-wrap"><div><span className="public-eyebrow">Diagnóstico interactivo</span><h2>Primero entendemos tu negocio. Luego te mostramos cómo respondería tu asistente.</h2><p className="public-lead">El valor no está solo en poner un chat. Está en convertir tu proceso real en un flujo que capture datos, responda dudas y deje oportunidades listas para seguimiento.</p><div className="diagnosis-steps"><article><strong>1. Tu negocio</strong><span>Nombre, giro, horarios, ubicación y canales actuales.</span></article><article><strong>2. Tus servicios</strong><span>Qué vendes, precios base, duración, zonas o requisitos.</span></article><article><strong>3. Tus clientes</strong><span>Qué preguntan, qué datos necesitas y cuándo debe intervenir una persona.</span></article></div><a className="public-button" href="#contacto">Probar diagnóstico</a></div><div className="diagnosis-chat"><strong>Ejemplo generado</strong><p><span>Cliente</span>Hola, tengo una estética y quiero automatizar citas para uñas y faciales.</p><p><span>AutoChat</span>Perfecto. Tu asistente puede pedir nombre, WhatsApp, servicio, día y horario. También puede responder precios, horarios, ubicación y dejar el lead en el panel como nuevo.</p><p><span>Resultado</span>El negocio recibe una solicitud clara, no solo un mensaje suelto.</p></div></div></section>
+      <section className="public-section diagnosis-section" id="diagnostico"><div className="public-inner diagnosis-wrap"><div><span className="public-eyebrow">Diagnóstico interactivo</span><h2>Primero entendemos tu negocio. Luego te mostramos cómo respondería tu asistente.</h2><p className="public-lead">El valor no está solo en poner un chat. Está en convertir tu proceso real en un flujo que capture datos, responda dudas y deje oportunidades listas para seguimiento.</p><div className="diagnosis-steps"><article><strong>1. Tu negocio</strong><span>Nombre, giro, horarios, ubicación y canales actuales.</span></article><article><strong>2. Tus servicios</strong><span>Qué vendes, precios base, duración, zonas o requisitos.</span></article><article><strong>3. Tus clientes</strong><span>Qué preguntan, qué datos necesitas y cuándo debe intervenir una persona.</span></article></div><a className="public-button" href="#chat" onClick={openPublicChat}>Probar diagnóstico</a></div><div className="diagnosis-chat"><strong>Ejemplo generado</strong><p><span>Cliente</span>Hola, tengo una estética y quiero automatizar citas para uñas y faciales.</p><p><span>AutoChat</span>Perfecto. Tu asistente puede pedir nombre, WhatsApp, servicio, día y horario. También puede responder precios, horarios, ubicación y dejar el lead en el panel como nuevo.</p><p><span>Resultado</span>El negocio recibe una solicitud clara, no solo un mensaje suelto.</p></div></div></section>
       <section className="public-section" id="soluciones"><div className="public-inner"><h2>Tu negocio no necesita otro formulario abandonado</h2><p className="public-lead">AutoChat se implementa por proyecto. Analizamos qué preguntas recibe tu negocio, qué datos necesita capturar y cómo debe avanzar cada oportunidad.</p><div className="public-grid three"><article><strong>Captura de clientes</strong><span>Nombre, teléfono, correo y contexto de la solicitud desde el primer contacto.</span></article><article><strong>Respuestas automáticas</strong><span>Servicios, precios, horarios, ubicación, políticas y preguntas frecuentes.</span></article><article><strong>Seguimiento comercial</strong><span>Panel de leads con estados, notas internas y conversación completa.</span></article></div></div></section>
       <section className="public-section public-band"><div className="public-inner public-split"><div><h2>Un canal propio, sin depender de WhatsApp API</h2><p className="public-lead">El asistente vive en la página del cliente. WhatsApp oficial puede agregarse después como fase premium, pero el proyecto puede venderse y operar desde web desde el día uno.</p><a className="public-button" href={PROJECTS_URL}>Ver proceso de trabajo</a></div><div className="public-preview" aria-label="Vista previa del asistente"><header><span></span><span></span><span></span></header><div className="preview-lines"><b></b><i></i><i></i><i></i></div><div className="preview-chat"><strong>Asistente</strong><span></span><span></span><span></span></div></div></div></section>
       <section className="public-section" id="demos"><div className="public-inner"><h2>Demos como ejemplos, no como límite</h2><p className="public-lead">Estas demos muestran distintos tonos y flujos. El asistente se adapta a cualquier negocio que necesite responder, filtrar y dar seguimiento.</p><div className="public-grid three"><article><strong>Barbería / estética</strong><span>Servicios, precios, horarios y solicitudes de cita como ejemplo comercial.</span><a className="public-button" href={DEMO_BARBERIA_URL}>Ver demo</a></article><article><strong>Clínica dental</strong><span>Valoración, limpieza, urgencias y captura de paciente con tono profesional.</span><a className="public-button" href={DEMO_DENTAL_URL}>Ver demo</a></article><article><strong>Proyecto personalizado</strong><span>Talleres, consultorios, inmobiliarias, cursos, despachos, servicios técnicos y más.</span><a className="public-button" href={PROJECTS_URL}>Ver proyectos</a></article></div></div></section>
@@ -210,7 +315,7 @@ function ProjectsPage() {
 function DemoPage({ page }) {
   return (
     <main className={'public-page demo-page ' + page.type}>
-      <section className="public-hero demo-hero"><PublicNav compact /><div className="public-hero-content"><span className="public-eyebrow">{page.eyebrow}</span><h1>{page.title}</h1><p>{page.description}</p><div className="public-actions"><a className="public-button" href="#probar">{page.primary}</a><a className="public-button secondary" href="#servicios">{page.secondary}</a></div></div></section>
+      <section className="public-hero demo-hero"><PublicNav compact /><div className="public-hero-content"><span className="public-eyebrow">{page.eyebrow}</span><h1>{page.title}</h1><p>{page.description}</p><div className="public-actions"><a className="public-button" href="#probar">{page.primary}</a><a className="public-button secondary" href="#servicios">{page.secondary}</a><a className="public-button secondary" href={LANDING_URL}>Regresar al inicio</a></div></div></section>
       <section className="public-section" id="servicios"><div className="public-inner"><h2>{page.servicesTitle}</h2><p className="public-lead">{page.servicesLead}</p><div className="public-grid four">{page.services.map(([name, desc, price]) => <article key={name}><strong>{name}</strong><span>{desc}</span><b>{price}</b></article>)}</div></div></section>
       <section className="public-section public-band"><div className="public-inner"><h2>{page.infoTitle}</h2><p className="public-lead">{page.infoLead}</p><div className="public-grid three">{page.info.map(([name, desc]) => <article key={name}><strong>{name}</strong><span>{desc}</span></article>)}</div></div></section>
       <section className="public-section"><div className="public-inner public-split"><div><h2>{page.storyTitle}</h2><p className="public-lead">{page.story}</p><a className="public-button" href="#probar">Abrir chat</a></div><div className="demo-photo" aria-label={page.title}></div></div></section>
@@ -917,14 +1022,14 @@ function AdminApp() {
               <label>
                 <span>Nombre del negocio</span>
                 <input value={settingsForm.name || ""} onChange={(event) => setSettingsForm((current) => ({ ...current, name: event.target.value }))} />
-                <small className="field-help">Aparece en respuestas del bot, panel y mensajes de confirmaci?n.</small>
+                <small className="field-help">Aparece en respuestas del bot, panel y mensajes de confirmación.</small>
               </label>
               <label>
                 <span>Teléfono</span>
                 <input value={settingsForm.phone || ""} onChange={(event) => setSettingsForm((current) => ({ ...current, phone: event.target.value }))} />
               </label>
               <label>
-                <span>Direcci?n o sucursal</span>
+                <span>Dirección o sucursal</span>
                 <input value={settingsForm.address || ""} onChange={(event) => setSettingsForm((current) => ({ ...current, address: event.target.value }))} />
                 <small className="field-help">Ejemplo: Sucursal Centro, Av. Salud 123 o servicio a domicilio.</small>
               </label>
@@ -933,7 +1038,7 @@ function AdminApp() {
                 <input value={settingsForm.hours || ""} onChange={(event) => setSettingsForm((current) => ({ ...current, hours: event.target.value }))} />
                 <small className="field-help">Texto que responde el bot cuando preguntan horarios.</small>
               </label>
-              <div className="form-section-title">Canales de atenci?n</div>
+              <div className="form-section-title">Canales de atención</div>
               <label>
                 <span>WhatsApp oficial opcional</span>
                 <select value={settingsForm.whatsappProvider || "none"} onChange={(event) => setSettingsForm((current) => ({ ...current, whatsappProvider: event.target.value }))}>
@@ -946,7 +1051,7 @@ function AdminApp() {
               </label>
               {settingsForm.whatsappProvider !== "none" && (
                 <label>
-                  <span>N?mero WhatsApp emisor</span>
+                  <span>Número WhatsApp emisor</span>
                   <input value={settingsForm.whatsappSender || ""} onChange={(event) => setSettingsForm((current) => ({ ...current, whatsappSender: event.target.value }))} placeholder={settingsForm.whatsappProvider === "meta" ? "+525550000000" : "whatsapp:+14155238886"} />
                 </label>
               )}
@@ -998,14 +1103,14 @@ function AdminApp() {
               )}
               <div className="form-section-title">Reglas para citas</div>
               <label>
-                <span>D?as m?ximos para agendar</span>
+                <span>Días máximos para agendar</span>
                 <div className="unit-input">
                   <input type="number" min="1" value={settingsForm.bookingWindowDays || 60} onChange={(event) => setSettingsForm((current) => ({ ...current, bookingWindowDays: Number(event.target.value) }))} />
                   <small>días</small>
                 </div>
               </label>
               <label>
-                <span>Anticipaci?n para cancelar o reagendar</span>
+                <span>Anticipación para cancelar o reagendar</span>
                 <div className="unit-input">
                   <input type="number" min="0" value={settingsForm.cancellationMinHours || 2} onChange={(event) => setSettingsForm((current) => ({ ...current, cancellationMinHours: Number(event.target.value) }))} />
                   <small>horas</small>
@@ -1018,7 +1123,7 @@ function AdminApp() {
                   <input type="number" min="0" value={settingsForm.defaultBufferMinutes || 10} onChange={(event) => setSettingsForm((current) => ({ ...current, defaultBufferMinutes: Number(event.target.value) }))} />
                   <small>min</small>
                 </div>
-                <small className="field-help">Margen para limpiar, preparar estaci?n, cobrar o recibir al siguiente cliente.</small>
+                <small className="field-help">Margen para limpiar, preparar estación, cobrar o recibir al siguiente cliente.</small>
               </label>
               <label>
                 <span>Tiempo para confirmar nombre</span>
@@ -1028,11 +1133,11 @@ function AdminApp() {
                 </div>
                 <small className="field-help">Cuando el bot encuentra horario, lo aparta mientras el cliente termina de confirmar.</small>
               </label>
-              <button type="submit"><Save size={18} /> Guardar configuraci?n</button>
+              <button type="submit"><Save size={18} /> Guardar configuración</button>
             </form>
 
             <h3>Servicios que puede ofrecer el bot</h3>
-            <p className="panel-copy">Cada servicio define precio, duraci?n y margen de agenda. El cliente puede pedirlo por nombre o n?mero.</p>
+            <p className="panel-copy">Cada servicio define precio, duración y margen de agenda. El cliente puede pedirlo por nombre o número.</p>
             <form className="service-form" onSubmit={saveService}>
               <label>
                 <span>Nombre del servicio</span>
@@ -1043,7 +1148,7 @@ function AdminApp() {
                 />
               </label>
               <label>
-                <span>Duraci?n</span>
+                <span>Duración</span>
                 <div className="unit-input">
                   <input
                     type="number"
@@ -1067,7 +1172,7 @@ function AdminApp() {
                 </div>
               </label>
               <label>
-                <span>Margen despu?s del servicio</span>
+                <span>Margen después del servicio</span>
                 <div className="unit-input">
                   <input
                     type="number"
@@ -1102,7 +1207,7 @@ function AdminApp() {
             </div>
 
             <h3>Horarios laborales</h3>
-            <p className="panel-copy">Estos horarios s? afectan la agenda. Si un d?a est? cerrado, el bot no debe aceptar citas ese d?a.</p>
+            <p className="panel-copy">Estos horarios sí afectan la agenda. Si un día está cerrado, el bot no debe aceptar citas ese día.</p>
             <div className="schedule-editor">
               {DAYS.map(([day, label]) => {
                 const isClosed = !scheduleForm[day]?.length;
@@ -1122,7 +1227,7 @@ function AdminApp() {
             </div>
 
             <h3><UserRound size={16} /> Personal</h3>
-            <p className="panel-copy">Asigna qu? servicios puede realizar cada empleado para evitar empalmes y sugerir horarios reales.</p>
+            <p className="panel-copy">Asigna qué servicios puede realizar cada empleado para evitar empalmes y sugerir horarios reales.</p>
             <form className="staff-form" onSubmit={createStaff}>
               <label>
                 <span>Nombre del empleado</span>
