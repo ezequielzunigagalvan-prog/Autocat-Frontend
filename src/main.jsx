@@ -25,6 +25,7 @@ import "./styles.css";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
 const PUBLIC_APP_URL = (import.meta.env.VITE_PUBLIC_APP_URL || API_URL).replace(/\/$/, "");
+const FRONTEND_URL = window.location.origin;
 const LEAD_STATUSES = [
   ["all", "Todos"],
   ["nuevo", "Nuevos"],
@@ -73,7 +74,149 @@ function formatDate(value) {
   return value ? new Date(value).toLocaleString("es-MX") : "";
 }
 
+
+const demoPages = {
+  "/demo-barberia": {
+    type: "barber",
+    businessId: "demo_barberia",
+    title: "Barbería Demo",
+    eyebrow: "Demo con asistente automático",
+    description: "Corte, barba y arreglo personal con atención rápida desde la página. Abre el chat para pedir precios, horarios o solicitar una cita.",
+    primary: "Probar asistente",
+    secondary: "Ver servicios",
+    servicesTitle: "Servicios populares",
+    servicesLead: "Precios de ejemplo para mostrar cómo el asistente puede responder dudas frecuentes y guiar al cliente hacia una solicitud de cita.",
+    services: [
+      ["Corte clásico", "Lavado rápido, corte y peinado.", "$180"],
+      ["Corte + barba", "Corte completo y delineado de barba.", "$280"],
+      ["Barba premium", "Toalla caliente, perfilado y aceite.", "$150"],
+      ["Facial express", "Limpieza rápida y mascarilla.", "$220"]
+    ],
+    infoTitle: "Información del negocio",
+    infoLead: "El bot puede contestar esta información automáticamente y capturar al cliente si quiere seguimiento.",
+    info: [["Horario", "Lunes a sábado de 10:00 a 20:00. Domingo cerrado."], ["Ubicación", "Sucursal Centro, cerca de zona comercial."], ["Agenda", "Solicitudes por chat web con nombre, teléfono y servicio."]],
+    storyTitle: "Experiencia lista para vender",
+    story: "Esta página funciona como demo para mostrarle a una barbería cómo se vería su asistente: captura el lead, responde dudas y deja la conversación en el panel.",
+    faqs: [["¿Necesito pagar WhatsApp API?", "No para esta fase. El asistente funciona desde la página web y captura leads directamente."], ["¿El negocio ve los clientes?", "Sí. Los leads quedan en el panel con estado, notas y conversación completa."], ["¿Se puede adaptar a otra estética?", "Sí. Se cambian servicios, textos, precios, horarios y colores para cada negocio."]]
+  },
+  "/demo-dental": {
+    type: "dental",
+    businessId: "demo_dental",
+    title: "Clínica Dental Demo",
+    eyebrow: "Demo con asistente para pacientes",
+    description: "Un asistente web que orienta al paciente, responde dudas comunes y captura solicitudes de valoración sin depender de WhatsApp API.",
+    primary: "Probar asistente",
+    secondary: "Ver tratamientos",
+    servicesTitle: "Tratamientos frecuentes",
+    servicesLead: "Servicios de ejemplo para mostrar cómo el asistente puede orientar pacientes y generar solicitudes claras para el equipo.",
+    services: [["Valoración inicial", "Revisión general y plan sugerido.", "$300"], ["Limpieza dental", "Profilaxis y recomendaciones de cuidado.", "$650"], ["Ortodoncia", "Evaluación para brackets o alineadores.", "Desde $900"], ["Urgencia dental", "Dolor, inflamación o molestia repentina.", "Prioridad"]],
+    infoTitle: "Atención clara desde el primer mensaje",
+    infoLead: "El asistente no diagnostica. Captura la solicitud, orienta con información general y pasa el caso al equipo para seguimiento.",
+    info: [["Captura del paciente", "Nombre, teléfono, correo y motivo de consulta."], ["Clasificación", "Valoración, limpieza, ortodoncia o urgencia."], ["Seguimiento", "El equipo ve el lead, notas e historial completo en el panel."]],
+    storyTitle: "Demo para mostrar a clínicas",
+    story: "Esta página enseña cómo una clínica dental puede recibir solicitudes desde su sitio web, incluso sin conectar WhatsApp oficial.",
+    faqs: [["¿El bot da diagnósticos?", "No. Solo brinda información general y captura la solicitud para que la revise el equipo."], ["¿Puede priorizar urgencias?", "Sí. Puede identificar mensajes de dolor o urgencia y marcarlos para atención humana."], ["¿Se adapta a tratamientos reales?", "Sí. Se configuran servicios, precios, horarios, preguntas frecuentes y tono de la clínica."]]
+  }
+};
+
+function PublicNav({ compact = false }) {
+  return (
+    <nav className="public-nav" aria-label="Navegación principal">
+      <a className="public-brand" href="/">AutoChat Web</a>
+      <div className="public-links">
+        <a href="/proyectos">Proyectos</a>
+        <a href="/#demos">Demos</a>
+        <a href="/admin">Panel</a>
+        {!compact && <a className="public-button" href="#contacto">Solicitar diagnóstico</a>}
+      </div>
+    </nav>
+  );
+}
+
+function PublicWidget({ businessId }) {
+  useEffect(() => {
+    const existing = document.querySelector("script[data-autochat-public-widget]");
+    if (existing) existing.remove();
+    document.querySelector("#ac-toggle")?.parentElement?.remove();
+    const script = document.createElement("script");
+    script.src = API_URL + "/public/widget.js";
+    script.dataset.apiUrl = API_URL;
+    script.dataset.businessId = businessId;
+    script.dataset.autochatPublicWidget = "true";
+    document.body.appendChild(script);
+    return () => {
+      script.remove();
+      document.querySelector("#ac-toggle")?.parentElement?.remove();
+    };
+  }, [businessId]);
+  return null;
+}
+
+function LandingPage() {
+  return (
+    <main className="public-page">
+      <section className="public-hero landing-hero">
+        <PublicNav />
+        <div className="public-hero-content">
+          <span className="public-eyebrow">Automatización web personalizada</span>
+          <h1>Asistentes web hechos para tu proceso</h1>
+          <p>Creamos asistentes automáticos para páginas y landing pages que responden preguntas, capturan clientes y organizan solicitudes según el flujo real de cada negocio.</p>
+          <div className="public-actions"><a className="public-button" href="/proyectos">Ver cómo funciona</a><a className="public-button secondary" href="#demos">Ver demos</a></div>
+        </div>
+      </section>
+      <section className="public-section" id="soluciones"><div className="public-inner"><h2>Tu negocio no necesita otro formulario abandonado</h2><p className="public-lead">AutoChat se implementa por proyecto. Analizamos qué preguntas recibe tu negocio, qué datos necesita capturar y cómo debe avanzar cada oportunidad.</p><div className="public-grid three"><article><strong>Captura de clientes</strong><span>Nombre, teléfono, correo y contexto de la solicitud desde el primer contacto.</span></article><article><strong>Respuestas automáticas</strong><span>Servicios, precios, horarios, ubicación, políticas y preguntas frecuentes.</span></article><article><strong>Seguimiento comercial</strong><span>Panel de leads con estados, notas internas y conversación completa.</span></article></div></div></section>
+      <section className="public-section public-band"><div className="public-inner public-split"><div><h2>Un canal propio, sin depender de WhatsApp API</h2><p className="public-lead">El asistente vive en la página del cliente. WhatsApp oficial puede agregarse después como fase premium, pero el proyecto puede venderse y operar desde web desde el día uno.</p><a className="public-button" href="/proyectos">Ver proceso de trabajo</a></div><div className="public-preview" aria-label="Vista previa del asistente"><header><span></span><span></span><span></span></header><div className="preview-lines"><b></b><i></i><i></i><i></i></div><div className="preview-chat"><strong>Asistente</strong><span></span><span></span><span></span></div></div></div></section>
+      <section className="public-section" id="demos"><div className="public-inner"><h2>Demos como ejemplos, no como límite</h2><p className="public-lead">Estas demos muestran distintos tonos y flujos. El asistente se adapta a cualquier negocio que necesite responder, filtrar y dar seguimiento.</p><div className="public-grid three"><article><strong>Barbería / estética</strong><span>Servicios, precios, horarios y solicitudes de cita como ejemplo comercial.</span><a className="public-button" href="/demo-barberia">Ver demo</a></article><article><strong>Clínica dental</strong><span>Valoración, limpieza, urgencias y captura de paciente con tono profesional.</span><a className="public-button" href="/demo-dental">Ver demo</a></article><article><strong>Proyecto personalizado</strong><span>Talleres, consultorios, inmobiliarias, cursos, despachos, servicios técnicos y más.</span><a className="public-button" href="/proyectos">Ver proyectos</a></article></div></div></section>
+      <section className="public-section" id="paquetes"><div className="public-inner"><h2>Implementación por proyecto</h2><p className="public-lead">El precio depende del flujo, contenido y nivel de personalización. La idea es empezar ligero y crecer cuando el canal demuestre valor.</p><div className="public-grid three price-grid"><article><strong>Proyecto inicial</strong><b>$2,500+</b><span>Widget web, flujo conversacional, captura de leads y panel de seguimiento.</span></article><article><strong>Proyecto avanzado</strong><b>$6,000+</b><span>Landing personalizada, FAQs, reglas de negocio, agenda o cotización.</span></article><article><strong>Mantenimiento</strong><b>$500+</b><span>Hosting básico, soporte, ajustes menores y mejoras del flujo.</span></article></div></div></section>
+      <section className="public-section public-cta" id="contacto"><div className="public-inner"><h2>Solicita un diagnóstico del flujo</h2><p className="public-lead">Abre el chat, deja tus datos y cuéntanos qué proceso quieres automatizar en tu página.</p><a className="public-button" href="/proyectos">Ver soluciones por proyecto</a></div></section>
+      <PublicFooter />
+      <PublicWidget businessId="demo_proyectos" />
+    </main>
+  );
+}
+
+function ProjectsPage() {
+  return (
+    <main className="public-page">
+      <section className="public-hero projects-hero"><PublicNav /><div className="public-hero-content"><span className="public-eyebrow">Soluciones por proyecto</span><h1>Automatizamos el primer contacto de tu negocio</h1><p>Diseñamos asistentes web para capturar clientes, responder preguntas y ordenar solicitudes según tu proceso: cotizaciones, citas, servicios, pacientes, alumnos o prospectos.</p><div className="public-actions"><a className="public-button" href="#proceso">Ver proceso</a><a className="public-button secondary" href="#casos">Ver casos de uso</a></div></div></section>
+      <section className="public-section"><div className="public-inner"><h2>Qué podemos automatizar</h2><p className="public-lead">No partimos de un nicho fijo. Partimos de la pregunta: qué necesitas capturar, responder o filtrar antes de que intervenga una persona.</p><div className="public-grid three"><article><strong>Leads y prospectos</strong><span>Captura datos y motivo de contacto para que ventas dé seguimiento.</span></article><article><strong>Cotizaciones</strong><span>Recopila datos iniciales para preparar precios o propuestas.</span></article><article><strong>Solicitudes de cita</strong><span>Pide servicio, día, hora, datos del cliente y deja todo en panel.</span></article><article><strong>Soporte inicial</strong><span>Responde preguntas frecuentes y deriva a humano cuando hace falta.</span></article><article><strong>Precalificación</strong><span>Filtra prospectos por necesidad, presupuesto, ubicación o urgencia.</span></article><article><strong>Registro de interesados</strong><span>Ideal para cursos, eventos, servicios profesionales o campañas.</span></article></div></div></section>
+      <section className="public-section public-band" id="proceso"><div className="public-inner"><h2>Proceso de trabajo</h2><p className="public-lead">Una implementación pequeña puede arrancar rápido. Luego se mejora con datos reales de los clientes que escriben.</p><div className="public-grid three"><article><strong>1. Diagnóstico</strong><span>Definimos objetivo, preguntas frecuentes y datos a capturar.</span></article><article><strong>2. Flujo</strong><span>Armamos el recorrido conversacional y reglas básicas.</span></article><article><strong>3. Implementación</strong><span>Instalamos widget o landing y conectamos el panel de leads.</span></article><article><strong>4. Prueba</strong><span>Probamos casos reales y ajustamos tono, respuestas y formularios.</span></article><article><strong>5. Operación</strong><span>El equipo da seguimiento desde la bandeja de leads.</span></article><article><strong>6. Mejora</strong><span>Se agregan automatizaciones o canales premium cuando conviene.</span></article></div></div></section>
+      <section className="public-section" id="casos"><div className="public-inner"><h2>Casos de uso posibles</h2><p className="public-lead">Las demos actuales son ejemplos. El mismo enfoque aplica a muchos tipos de negocio.</p><div className="public-grid three"><article><strong>Servicios locales</strong><span>Barberías, estéticas, talleres, limpieza, reparaciones, instaladores.</span></article><article><strong>Profesionales</strong><span>Abogados, contadores, arquitectos, consultores, agencias.</span></article><article><strong>Salud y bienestar</strong><span>Consultorios, dentistas, psicólogos, spas, gimnasios, terapeutas.</span></article><article><strong>Educación</strong><span>Cursos, escuelas, academias, talleres y capacitaciones.</span></article><article><strong>Inmobiliarias</strong><span>Captura de compradores, renta, presupuesto, zona y seguimiento.</span></article><article><strong>B2B</strong><span>Solicitudes comerciales, demos, cotizaciones y clasificación de prospectos.</span></article></div></div></section>
+      <section className="public-section public-cta" id="contacto"><div className="public-inner"><h2>Cuéntanos qué quieres automatizar</h2><p className="public-lead">Abre el chat y describe tu negocio. La idea es convertir tu proceso actual en un asistente web claro y medible.</p><a className="public-button" href="#">Chat disponible abajo</a></div></section>
+      <PublicFooter />
+      <PublicWidget businessId="demo_proyectos" />
+    </main>
+  );
+}
+
+function DemoPage({ page }) {
+  return (
+    <main className={'public-page demo-page ' + page.type}>
+      <section className="public-hero demo-hero"><PublicNav compact /><div className="public-hero-content"><span className="public-eyebrow">{page.eyebrow}</span><h1>{page.title}</h1><p>{page.description}</p><div className="public-actions"><a className="public-button" href="#probar">{page.primary}</a><a className="public-button secondary" href="#servicios">{page.secondary}</a></div></div></section>
+      <section className="public-section" id="servicios"><div className="public-inner"><h2>{page.servicesTitle}</h2><p className="public-lead">{page.servicesLead}</p><div className="public-grid four">{page.services.map(([name, desc, price]) => <article key={name}><strong>{name}</strong><span>{desc}</span><b>{price}</b></article>)}</div></div></section>
+      <section className="public-section public-band"><div className="public-inner"><h2>{page.infoTitle}</h2><p className="public-lead">{page.infoLead}</p><div className="public-grid three">{page.info.map(([name, desc]) => <article key={name}><strong>{name}</strong><span>{desc}</span></article>)}</div></div></section>
+      <section className="public-section"><div className="public-inner public-split"><div><h2>{page.storyTitle}</h2><p className="public-lead">{page.story}</p><a className="public-button" href="#probar">Abrir chat</a></div><div className="demo-photo" aria-label={page.title}></div></div></section>
+      <section className="public-section"><div className="public-inner"><h2>Preguntas frecuentes</h2><div className="public-grid three">{page.faqs.map(([question, answer]) => <article key={question}><strong>{question}</strong><span>{answer}</span></article>)}</div></div></section>
+      <section className="public-section public-cta" id="probar"><div className="public-inner"><h2>Prueba el asistente</h2><p className="public-lead">Abre el chat de la esquina inferior derecha, deja tus datos y pregunta por un servicio u horario disponible.</p><a className="public-button" href="#">Chat disponible abajo</a></div></section>
+      <PublicFooter label={page.title} />
+      <PublicWidget businessId={page.businessId} />
+    </main>
+  );
+}
+
+function PublicFooter({ label = "AutoChat Web" }) {
+  return <footer className="public-footer"><div className="public-inner"><strong>{label}</strong><span>Automatización web personalizada para negocios.</span></div></footer>;
+}
+
 function App() {
+  const path = window.location.pathname.replace(/\/$/, "") || "/";
+  if (path === "/admin") return <AdminApp />;
+  if (path === "/proyectos") return <ProjectsPage />;
+  if (demoPages[path]) return <DemoPage page={demoPages[path]} />;
+  return <LandingPage />;
+}
+
+function AdminApp() {
   const [token, setToken] = useState(() => localStorage.getItem("autochat_token") || "");
   const [view, setView] = useState("dashboard");
   const [loginForm, setLoginForm] = useState({ email: "admin@autochat.test", password: "123456" });
@@ -556,13 +699,13 @@ function App() {
     ["confirmed", "hold"].includes(appointment.status)
   );
   const selectedLead = inbox.find((customer) => customer.id === selectedLeadId) || inbox[0];
-  const widgetScript = `<script src="${PUBLIC_APP_URL}/public/widget.js" data-api-url="${PUBLIC_APP_URL}" data-business-id="${selected?.id || ""}"></script>`;
+  const widgetScript = `<script src="${API_URL}/public/widget.js" data-api-url="${API_URL}" data-business-id="${selected?.id || ""}"></script>`;
   const publicLinks = [
-    ["Landing general", `${PUBLIC_APP_URL}/public/landing.html`],
-    ["Soluciones por proyecto", `${PUBLIC_APP_URL}/public/proyectos.html`],
+    ["Landing general", `${FRONTEND_URL}/`],
+    ["Soluciones por proyecto", `${FRONTEND_URL}/proyectos`],
     ["Demo barbería", `${PUBLIC_APP_URL}/public/demo-barberia.html`],
-    ["Demo dental", `${PUBLIC_APP_URL}/public/demo-dental.html`],
-    ["Demo widget", `${PUBLIC_APP_URL}/public/widget-demo.html`]
+    ["Demo dental", `${FRONTEND_URL}/demo-dental`],
+    ["Panel admin", `${FRONTEND_URL}/admin`]
   ];
   useEffect(() => {
     if (selectedLead) setLeadNotes(selectedLead.notes || "");
@@ -617,10 +760,11 @@ function App() {
             type="password"
             value={loginForm.password}
             onChange={(event) => setLoginForm((current) => ({ ...current, password: event.target.value }))}
-            aria-label="Contrasena"
+            aria-label="Contraseña"
           />
           <button type="submit">Entrar</button>
           <p>Demo: admin@autochat.test / 123456</p>
+          <a className="public-login-link" href="/">Volver a la landing</a>
           {notice && <span>{notice}</span>}
         </form>
       </main>
@@ -710,7 +854,7 @@ function App() {
             </div>
             <label className="script-box">
               <span>Script para instalar en página del cliente</span>
-              <textarea readOnly value={widgetScript} aria-label="Codigo widget" />
+              <textarea readOnly value={widgetScript} aria-label="Código widget" />
               <button type="button" onClick={() => copyText(widgetScript, "Script del widget")}><Copy size={16} /> Copiar script</button>
             </label>
           </div>}
@@ -757,7 +901,7 @@ function App() {
                 <input value={settingsForm.name || ""} onChange={(event) => setSettingsForm((current) => ({ ...current, name: event.target.value }))} />
               </label>
               <label>
-                <span>Telefono</span>
+                <span>Teléfono</span>
                 <input value={settingsForm.phone || ""} onChange={(event) => setSettingsForm((current) => ({ ...current, phone: event.target.value }))} />
               </label>
               <label>
