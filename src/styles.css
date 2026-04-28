@@ -538,10 +538,24 @@ form button, .quick-actions button {
 .settings-form .full-row {
   grid-column: 1 / -1;
 }
+.form-section-title {
+  grid-column: 1 / -1;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #eef2ed;
+  color: #294139;
+  font-weight: 900;
+}
 .settings-form label span, .service-form label span, .staff-form label span, .faq-form label span {
   color: #526158;
   font-size: 13px;
   font-weight: 700;
+}
+.field-help {
+  color: #6b776f;
+  font-size: 12px;
+  line-height: 1.35;
 }
 .unit-input {
   display: grid;

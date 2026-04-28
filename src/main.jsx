@@ -26,8 +26,11 @@ import "./styles.css";
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
 const PUBLIC_APP_URL = (import.meta.env.VITE_PUBLIC_APP_URL || API_URL).replace(/\/$/, "");
 const FRONTEND_URL = window.location.origin;
+const LANDING_URL = `${PUBLIC_APP_URL}/landing.html`;
+const PROJECTS_URL = `${PUBLIC_APP_URL}/proyectos.html`;
 const DEMO_BARBERIA_URL = `${PUBLIC_APP_URL}/demo-barberia.html`;
 const DEMO_DENTAL_URL = `${PUBLIC_APP_URL}/demo-dental.html`;
+const ADMIN_URL = `${FRONTEND_URL}/admin`;
 const LEAD_STATUSES = [
   ["all", "Todos"],
   ["nuevo", "Nuevos"],
@@ -124,11 +127,11 @@ const demoPages = {
 function PublicNav({ compact = false }) {
   return (
     <nav className="public-nav" aria-label="Navegación principal">
-      <a className="public-brand" href="/">AutoChat Web</a>
+      <a className="public-brand" href={LANDING_URL}>AutoChat Web</a>
       <div className="public-links">
-        <a href="/proyectos">Proyectos</a>
+        <a href={PROJECTS_URL}>Proyectos</a>
         <a href="/#demos">Demos</a>
-        <a href="/admin">Panel</a>
+        <a href={ADMIN_URL}>Panel</a>
         {!compact && <a className="public-button" href="#contacto">Solicitar diagnóstico</a>}
       </div>
     </nav>
@@ -163,14 +166,14 @@ function LandingPage() {
           <span className="public-eyebrow">Automatización web personalizada</span>
           <h1>Asistentes web hechos para tu proceso</h1>
           <p>Creamos asistentes automáticos para páginas y landing pages que responden preguntas, capturan clientes y organizan solicitudes según el flujo real de cada negocio.</p>
-          <div className="public-actions"><a className="public-button" href="/proyectos">Ver cómo funciona</a><a className="public-button secondary" href="#demos">Ver demos</a></div>
+          <div className="public-actions"><a className="public-button" href={PROJECTS_URL}>Ver cómo funciona</a><a className="public-button secondary" href="#demos">Ver demos</a></div>
         </div>
       </section>
       <section className="public-section" id="soluciones"><div className="public-inner"><h2>Tu negocio no necesita otro formulario abandonado</h2><p className="public-lead">AutoChat se implementa por proyecto. Analizamos qué preguntas recibe tu negocio, qué datos necesita capturar y cómo debe avanzar cada oportunidad.</p><div className="public-grid three"><article><strong>Captura de clientes</strong><span>Nombre, teléfono, correo y contexto de la solicitud desde el primer contacto.</span></article><article><strong>Respuestas automáticas</strong><span>Servicios, precios, horarios, ubicación, políticas y preguntas frecuentes.</span></article><article><strong>Seguimiento comercial</strong><span>Panel de leads con estados, notas internas y conversación completa.</span></article></div></div></section>
-      <section className="public-section public-band"><div className="public-inner public-split"><div><h2>Un canal propio, sin depender de WhatsApp API</h2><p className="public-lead">El asistente vive en la página del cliente. WhatsApp oficial puede agregarse después como fase premium, pero el proyecto puede venderse y operar desde web desde el día uno.</p><a className="public-button" href="/proyectos">Ver proceso de trabajo</a></div><div className="public-preview" aria-label="Vista previa del asistente"><header><span></span><span></span><span></span></header><div className="preview-lines"><b></b><i></i><i></i><i></i></div><div className="preview-chat"><strong>Asistente</strong><span></span><span></span><span></span></div></div></div></section>
-      <section className="public-section" id="demos"><div className="public-inner"><h2>Demos como ejemplos, no como límite</h2><p className="public-lead">Estas demos muestran distintos tonos y flujos. El asistente se adapta a cualquier negocio que necesite responder, filtrar y dar seguimiento.</p><div className="public-grid three"><article><strong>Barbería / estética</strong><span>Servicios, precios, horarios y solicitudes de cita como ejemplo comercial.</span><a className="public-button" href={DEMO_BARBERIA_URL}>Ver demo</a></article><article><strong>Clínica dental</strong><span>Valoración, limpieza, urgencias y captura de paciente con tono profesional.</span><a className="public-button" href={DEMO_DENTAL_URL}>Ver demo</a></article><article><strong>Proyecto personalizado</strong><span>Talleres, consultorios, inmobiliarias, cursos, despachos, servicios técnicos y más.</span><a className="public-button" href="/proyectos">Ver proyectos</a></article></div></div></section>
+      <section className="public-section public-band"><div className="public-inner public-split"><div><h2>Un canal propio, sin depender de WhatsApp API</h2><p className="public-lead">El asistente vive en la página del cliente. WhatsApp oficial puede agregarse después como fase premium, pero el proyecto puede venderse y operar desde web desde el día uno.</p><a className="public-button" href={PROJECTS_URL}>Ver proceso de trabajo</a></div><div className="public-preview" aria-label="Vista previa del asistente"><header><span></span><span></span><span></span></header><div className="preview-lines"><b></b><i></i><i></i><i></i></div><div className="preview-chat"><strong>Asistente</strong><span></span><span></span><span></span></div></div></div></section>
+      <section className="public-section" id="demos"><div className="public-inner"><h2>Demos como ejemplos, no como límite</h2><p className="public-lead">Estas demos muestran distintos tonos y flujos. El asistente se adapta a cualquier negocio que necesite responder, filtrar y dar seguimiento.</p><div className="public-grid three"><article><strong>Barbería / estética</strong><span>Servicios, precios, horarios y solicitudes de cita como ejemplo comercial.</span><a className="public-button" href={DEMO_BARBERIA_URL}>Ver demo</a></article><article><strong>Clínica dental</strong><span>Valoración, limpieza, urgencias y captura de paciente con tono profesional.</span><a className="public-button" href={DEMO_DENTAL_URL}>Ver demo</a></article><article><strong>Proyecto personalizado</strong><span>Talleres, consultorios, inmobiliarias, cursos, despachos, servicios técnicos y más.</span><a className="public-button" href={PROJECTS_URL}>Ver proyectos</a></article></div></div></section>
       <section className="public-section" id="paquetes"><div className="public-inner"><h2>Implementación por proyecto</h2><p className="public-lead">El precio depende del flujo, contenido y nivel de personalización. La idea es empezar ligero y crecer cuando el canal demuestre valor.</p><div className="public-grid three price-grid"><article><strong>Proyecto inicial</strong><b>$2,500+</b><span>Widget web, flujo conversacional, captura de leads y panel de seguimiento.</span></article><article><strong>Proyecto avanzado</strong><b>$6,000+</b><span>Landing personalizada, FAQs, reglas de negocio, agenda o cotización.</span></article><article><strong>Mantenimiento</strong><b>$500+</b><span>Hosting básico, soporte, ajustes menores y mejoras del flujo.</span></article></div></div></section>
-      <section className="public-section public-cta" id="contacto"><div className="public-inner"><h2>Solicita un diagnóstico del flujo</h2><p className="public-lead">Abre el chat, deja tus datos y cuéntanos qué proceso quieres automatizar en tu página.</p><a className="public-button" href="/proyectos">Ver soluciones por proyecto</a></div></section>
+      <section className="public-section public-cta" id="contacto"><div className="public-inner"><h2>Solicita un diagnóstico del flujo</h2><p className="public-lead">Abre el chat, deja tus datos y cuéntanos qué proceso quieres automatizar en tu página.</p><a className="public-button" href={PROJECTS_URL}>Ver soluciones por proyecto</a></div></section>
       <PublicFooter />
       <PublicWidget businessId="demo_proyectos" />
     </main>
@@ -703,11 +706,11 @@ function AdminApp() {
   const selectedLead = inbox.find((customer) => customer.id === selectedLeadId) || inbox[0];
   const widgetScript = `<script src="${API_URL}/public/widget.js" data-api-url="${API_URL}" data-business-id="${selected?.id || ""}"></script>`;
   const publicLinks = [
-    ["Landing general", `${FRONTEND_URL}/`],
-    ["Soluciones por proyecto", `${FRONTEND_URL}/proyectos`],
+    ["Landing general", LANDING_URL],
+    ["Soluciones por proyecto", PROJECTS_URL],
     ["Demo barbería", DEMO_BARBERIA_URL],
     ["Demo dental", DEMO_DENTAL_URL],
-    ["Panel admin", `${FRONTEND_URL}/admin`]
+    ["Panel admin", ADMIN_URL]
   ];
   useEffect(() => {
     if (selectedLead) setLeadNotes(selectedLead.notes || "");
@@ -766,7 +769,7 @@ function AdminApp() {
           />
           <button type="submit">Entrar</button>
           <p>Demo: admin@autochat.test / 123456</p>
-          <a className="public-login-link" href="/">Volver a la landing</a>
+          <a className="public-login-link" href={LANDING_URL}>Volver a la landing</a>
           {notice && <span>{notice}</span>}
         </form>
       </main>
@@ -901,19 +904,23 @@ function AdminApp() {
               <label>
                 <span>Nombre del negocio</span>
                 <input value={settingsForm.name || ""} onChange={(event) => setSettingsForm((current) => ({ ...current, name: event.target.value }))} />
+                <small className="field-help">Aparece en respuestas del bot, panel y mensajes de confirmaci?n.</small>
               </label>
               <label>
                 <span>Teléfono</span>
                 <input value={settingsForm.phone || ""} onChange={(event) => setSettingsForm((current) => ({ ...current, phone: event.target.value }))} />
               </label>
               <label>
-                <span>Direccion</span>
+                <span>Direcci?n o sucursal</span>
                 <input value={settingsForm.address || ""} onChange={(event) => setSettingsForm((current) => ({ ...current, address: event.target.value }))} />
+                <small className="field-help">Ejemplo: Sucursal Centro, Av. Salud 123 o servicio a domicilio.</small>
               </label>
               <label>
                 <span>Horario visible</span>
                 <input value={settingsForm.hours || ""} onChange={(event) => setSettingsForm((current) => ({ ...current, hours: event.target.value }))} />
+                <small className="field-help">Texto que responde el bot cuando preguntan horarios.</small>
               </label>
+              <div className="form-section-title">Canales de atenci?n</div>
               <label>
                 <span>WhatsApp oficial opcional</span>
                 <select value={settingsForm.whatsappProvider || "none"} onChange={(event) => setSettingsForm((current) => ({ ...current, whatsappProvider: event.target.value }))}>
@@ -922,10 +929,11 @@ function AdminApp() {
                   <option value="meta">Meta Cloud API</option>
                   <option value="360dialog">360dialog</option>
                 </select>
+                <small className="field-help">Por ahora puedes dejarlo apagado. El widget web funciona sin WhatsApp API.</small>
               </label>
               {settingsForm.whatsappProvider !== "none" && (
                 <label>
-                  <span>Numero WhatsApp</span>
+                  <span>N?mero WhatsApp emisor</span>
                   <input value={settingsForm.whatsappSender || ""} onChange={(event) => setSettingsForm((current) => ({ ...current, whatsappSender: event.target.value }))} placeholder={settingsForm.whatsappProvider === "meta" ? "+525550000000" : "whatsapp:+14155238886"} />
                 </label>
               )}
@@ -975,41 +983,46 @@ function AdminApp() {
                   </label>
                 </>
               )}
+              <div className="form-section-title">Reglas para citas</div>
               <label>
-                <span>Ventana de agenda</span>
+                <span>D?as m?ximos para agendar</span>
                 <div className="unit-input">
                   <input type="number" min="1" value={settingsForm.bookingWindowDays || 60} onChange={(event) => setSettingsForm((current) => ({ ...current, bookingWindowDays: Number(event.target.value) }))} />
                   <small>días</small>
                 </div>
               </label>
               <label>
-                <span>Anticipacion para cancelar/reagendar</span>
+                <span>Anticipaci?n para cancelar o reagendar</span>
                 <div className="unit-input">
                   <input type="number" min="0" value={settingsForm.cancellationMinHours || 2} onChange={(event) => setSettingsForm((current) => ({ ...current, cancellationMinHours: Number(event.target.value) }))} />
                   <small>horas</small>
                 </div>
+                <small className="field-help">Si faltan menos horas, el bot manda el caso a una persona.</small>
               </label>
               <label>
-                <span>Buffer entre citas</span>
+                <span>Tiempo libre entre citas</span>
                 <div className="unit-input">
                   <input type="number" min="0" value={settingsForm.defaultBufferMinutes || 10} onChange={(event) => setSettingsForm((current) => ({ ...current, defaultBufferMinutes: Number(event.target.value) }))} />
                   <small>min</small>
                 </div>
+                <small className="field-help">Margen para limpiar, preparar estaci?n, cobrar o recibir al siguiente cliente.</small>
               </label>
               <label>
-                <span>Apartado temporal</span>
+                <span>Tiempo para confirmar nombre</span>
                 <div className="unit-input">
                   <input type="number" min="1" value={settingsForm.holdMinutes || 10} onChange={(event) => setSettingsForm((current) => ({ ...current, holdMinutes: Number(event.target.value) }))} />
                   <small>min</small>
                 </div>
+                <small className="field-help">Cuando el bot encuentra horario, lo aparta mientras el cliente termina de confirmar.</small>
               </label>
-              <button type="submit"><Save size={18} /> Guardar</button>
+              <button type="submit"><Save size={18} /> Guardar configuraci?n</button>
             </form>
 
-            <h3>Servicios</h3>
+            <h3>Servicios que puede ofrecer el bot</h3>
+            <p className="panel-copy">Cada servicio define precio, duraci?n y margen de agenda. El cliente puede pedirlo por nombre o n?mero.</p>
             <form className="service-form" onSubmit={saveService}>
               <label>
-                <span>Servicio</span>
+                <span>Nombre del servicio</span>
                 <input
                   value={serviceForm.name}
                   onChange={(event) => setServiceForm((current) => ({ ...current, name: event.target.value }))}
@@ -1017,7 +1030,7 @@ function AdminApp() {
                 />
               </label>
               <label>
-                <span>Duracion</span>
+                <span>Duraci?n</span>
                 <div className="unit-input">
                   <input
                     type="number"
@@ -1041,7 +1054,7 @@ function AdminApp() {
                 </div>
               </label>
               <label>
-                <span>Buffer</span>
+                <span>Margen despu?s del servicio</span>
                 <div className="unit-input">
                   <input
                     type="number"
@@ -1066,7 +1079,7 @@ function AdminApp() {
               {selected?.services?.map((service) => (
                 <article key={service.id}>
                   <strong>{service.name}</strong>
-                  <span>{service.durationMinutes} min, ${service.price}, buffer {service.bufferMinutes ?? selected.defaultBufferMinutes} min</span>
+                  <span>{service.durationMinutes} min, ${service.price}, margen {service.bufferMinutes ?? selected.defaultBufferMinutes} min</span>
                   <div className="mini-actions">
                     <button type="button" onClick={() => editService(service)}>Editar</button>
                     <button type="button" onClick={() => toggleService(service)}>{service.active ? "Desactivar" : "Activar"}</button>
@@ -1076,6 +1089,7 @@ function AdminApp() {
             </div>
 
             <h3>Horarios laborales</h3>
+            <p className="panel-copy">Estos horarios s? afectan la agenda. Si un d?a est? cerrado, el bot no debe aceptar citas ese d?a.</p>
             <div className="schedule-editor">
               {DAYS.map(([day, label]) => {
                 const isClosed = !scheduleForm[day]?.length;
@@ -1095,6 +1109,7 @@ function AdminApp() {
             </div>
 
             <h3><UserRound size={16} /> Personal</h3>
+            <p className="panel-copy">Asigna qu? servicios puede realizar cada empleado para evitar empalmes y sugerir horarios reales.</p>
             <form className="staff-form" onSubmit={createStaff}>
               <label>
                 <span>Nombre del empleado</span>
