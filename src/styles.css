@@ -776,7 +776,7 @@ form button, .quick-actions button {
 .public-hero.landing-hero {
   background:
     linear-gradient(90deg, rgba(18, 31, 26, 0.82), rgba(18, 31, 26, 0.22)),
-    url("https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=1800&q=80") center / cover;
+    url("https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=1800&q=82") center / cover;
 }
 .public-hero.projects-hero {
   background:
@@ -915,6 +915,58 @@ form button, .quick-actions button {
   font-size: 26px;
   color: #294139;
 }
+.diagnosis-section {
+  background: #fff;
+}
+.diagnosis-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.85fr);
+  gap: 34px;
+  align-items: center;
+}
+.diagnosis-steps {
+  display: grid;
+  gap: 10px;
+  margin: 22px 0;
+}
+.diagnosis-steps article {
+  border-left: 4px solid #c66d42;
+  background: #f7f9f6;
+  border-radius: 8px;
+  padding: 14px;
+  display: grid;
+  gap: 4px;
+}
+.diagnosis-steps span {
+  color: #647168;
+}
+.diagnosis-chat {
+  background: #15251f;
+  color: #fff;
+  border-radius: 8px;
+  padding: 18px;
+  display: grid;
+  gap: 12px;
+  box-shadow: 0 18px 45px rgba(27, 37, 32, 0.18);
+}
+.diagnosis-chat > strong {
+  color: #f2c28f;
+  font-size: 18px;
+}
+.diagnosis-chat p {
+  margin: 0;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 12px;
+  line-height: 1.45;
+}
+.diagnosis-chat span {
+  display: block;
+  margin-bottom: 5px;
+  color: #f2c28f;
+  font-weight: 900;
+}
 .public-split {
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(320px, 1fr);
@@ -986,6 +1038,28 @@ form button, .quick-actions button {
   background: #294139;
   color: #fff;
 }
+.cta-contact-wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.55fr);
+  gap: 24px;
+  align-items: center;
+}
+.contact-note {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  padding: 18px;
+  display: grid;
+  gap: 8px;
+}
+.contact-note strong {
+  color: #f2c28f;
+  font-size: 18px;
+}
+.contact-note span {
+  color: rgba(255, 255, 255, 0.84);
+  line-height: 1.5;
+}
 .public-cta .public-lead {
   color: rgba(255, 255, 255, 0.82);
 }
@@ -1020,7 +1094,9 @@ form button, .quick-actions button {
   .public-links { gap: 10px; }
   .public-grid.three,
   .public-grid.four,
-  .public-split { grid-template-columns: 1fr; }
+  .public-split,
+  .diagnosis-wrap,
+  .cta-contact-wrap { grid-template-columns: 1fr; }
   .public-section { padding: 54px 18px; }
   .public-preview { min-height: 280px; }
 }
