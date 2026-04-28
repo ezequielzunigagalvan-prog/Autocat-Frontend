@@ -134,7 +134,6 @@ function PublicNav({ compact = false }) {
       <div className="public-links">
         <a href={PROJECTS_URL}>Proyectos</a>
         <a href={`${LANDING_URL}#demos`}>Demos</a>
-        <a href={ADMIN_URL}>Panel</a>
         {!compact && <a className="public-button" href="#contacto">Solicitar diagnóstico</a>}
       </div>
     </nav>
