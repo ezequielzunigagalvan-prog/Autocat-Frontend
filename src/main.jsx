@@ -278,6 +278,8 @@ const widgetDefaults = {
     phone: "+525551111111",
     email: "cliente@demo.com",
     prompt: "Quiero un corte clásico mañana por la tarde",
+    title: "AutoChat Barbería",
+    intro: "Prueba servicios, horarios y agenda guiada.",
     hello: "Hola. Soy el asistente de la barbería demo. Puedo ayudarte con servicios, precios, horarios y solicitudes de cita."
   },
   demo_dental: {
@@ -285,6 +287,8 @@ const widgetDefaults = {
     phone: "+525552222222",
     email: "paciente@demo.com",
     prompt: "Quiero una valoración dental esta semana",
+    title: "AutoChat Dental",
+    intro: "Orientación inicial y captura de pacientes.",
     hello: "Hola. Soy el asistente de la clínica dental demo. Puedo orientarte con tratamientos, horarios y solicitudes de cita."
   },
   demo_proyectos: {
@@ -292,6 +296,8 @@ const widgetDefaults = {
     phone: "+525553333333",
     email: "contacto@negocio.com",
     prompt: "Tengo una estética, atiendo lunes a sábado, hago uñas y faciales, quiero capturar nombre, WhatsApp, servicio y horario.",
+    title: "Diagnóstico AutoChat",
+    intro: "Cuéntame tu proyecto y genero un ejemplo.",
     hello: "Hola. Para preparar tu diagnóstico, cuéntame qué negocio tienes, tus servicios, horarios, qué datos necesitas pedir y qué quieres automatizar."
   }
 };
@@ -356,15 +362,17 @@ function PublicWidget({ businessId }) {
       if (!response.ok) throw new Error(body.error || "No se pudo iniciar el chat.");
       setFrom(body.from);
       setLeadReady(true);
-      setMessages([{ who: "bot", text: defaults.hello }]);
+      setMessages([
+        { who: "bot", text: defaults.hello },
+        { who: "bot", text: "¿En qué puedo ayudarte hoy?" }
+      ]);
     } catch (error) {
       setLeadError(error.message || "No se pudo iniciar el chat.");
     }
   }
 
-  async function sendWidgetMessage(event) {
-    event.preventDefault();
-    const text = messageText.trim();
+  async function deliverWidgetText(rawText) {
+    const text = rawText.trim();
     if (!text || !from) return;
     setMessageText("");
     setMessages((current) => [...current, { who: "me", text }]);
@@ -381,15 +389,51 @@ function PublicWidget({ businessId }) {
     }
   }
 
+  async function sendWidgetMessage(event) {
+    event.preventDefault();
+    await deliverWidgetText(messageText);
+  }
+
+  function widgetQuickReplies(text) {
+    const normalized = String(text || "").toLowerCase();
+    if (normalized.includes("¿en qué puedo ayudarte") || normalized.includes("en que puedo ayudarte")) {
+      const quoteMode = /cotiza|cotización|cotizacion|filtr|industrial|proyecto|renta|curso/i.test(`${defaults.prompt} ${defaults.hello}`);
+      return [
+        ["Ver servicios", "servicios"],
+        [quoteMode ? "Solicitar cotización" : "Agendar cita", quoteMode ? "cotización" : "agendar cita"],
+        ["Atención", "atención"]
+      ];
+    }
+    if (normalized.includes("qué tan urgente") || normalized.includes("que tan urgente")) {
+      return [["Urgente", "Urgente"], ["Esta semana", "Esta semana"], ["Programado", "Programado"]];
+    }
+    if (normalized.includes("servicios disponibles") || normalized.includes("estos son nuestros servicios")) {
+      const matches = [...String(text).matchAll(/^\s*(\d+)\.\s+(.+)$/gm)].slice(0, 5);
+      return matches.map((match) => [match[2].replace(/\s*\(.+\)$/, "").slice(0, 38), match[1]]);
+    }
+    return [];
+  }
+
+  function sendWidgetQuickReply(value) {
+    deliverWidgetText(value);
+  }
+
   return (
     <div className="react-widget-root">
       {!isOpen && <button className="react-widget-toggle" type="button" onClick={() => setIsOpen(true)}>Chat</button>}
       {isOpen && <section className="react-widget-panel" id="chat">
-        <header><span>Asistente</span><button type="button" onClick={closePublicWidget}>x</button></header>
+        <header>
+          <div className="react-widget-avatar">AI</div>
+          <div>
+            <strong>{defaults.title}</strong>
+            <span>{defaults.intro}</span>
+          </div>
+          <button type="button" onClick={closePublicWidget} aria-label="Cerrar chat">×</button>
+        </header>
         {!leadReady ? (
           <form className="react-widget-lead" onSubmit={startChat}>
-            <strong>{businessId === "demo_proyectos" ? "Recibe un diagnóstico de tu negocio" : "Prueba esta demo"}</strong>
-            <span>{businessId === "demo_proyectos" ? "Deja tus datos y cuéntame tu proyecto para generar un ejemplo." : "Los campos vienen llenos para que puedas probar rápido."}</span>
+            <strong>Antes de iniciar</strong>
+            <span>{defaults.intro}</span>
             <input value={leadForm.name} onChange={(event) => setLeadForm((current) => ({ ...current, name: event.target.value }))} placeholder="Nombre" required />
             <input value={leadForm.phone} onChange={(event) => setLeadForm((current) => ({ ...current, phone: event.target.value }))} placeholder="Teléfono / WhatsApp" required />
             <input value={leadForm.email} onChange={(event) => setLeadForm((current) => ({ ...current, email: event.target.value }))} placeholder="Correo opcional" type="email" />
@@ -399,7 +443,18 @@ function PublicWidget({ businessId }) {
         ) : (
           <>
             <div className="react-widget-messages">
-              {messages.map((item, index) => <p key={index} className={item.who === "me" ? "me" : "bot"}>{item.text}</p>)}
+              {messages.map((item, index) => (
+                <React.Fragment key={index}>
+                  <p className={item.who === "me" ? "me" : "bot"}><span>{item.who === "me" ? "Tú" : defaults.title}</span>{item.text}</p>
+                  {item.who !== "me" && widgetQuickReplies(item.text).length > 0 && (
+                    <div className="react-widget-options">
+                      {widgetQuickReplies(item.text).map(([label, value]) => (
+                        <button key={`${index}-${label}`} type="button" onClick={() => sendWidgetQuickReply(value)}>{label}</button>
+                      ))}
+                    </div>
+                  )}
+                </React.Fragment>
+              ))}
             </div>
             <form className="react-widget-form" onSubmit={sendWidgetMessage}>
               <input value={messageText} onChange={(event) => setMessageText(event.target.value)} placeholder="Escribe..." />
@@ -1012,7 +1067,7 @@ function AdminApp() {
     ["confirmed", "hold"].includes(appointment.status)
   );
   const selectedLead = inbox.find((customer) => customer.id === selectedLeadId) || inbox[0];
-  const widgetScript = `<script src="${API_URL}/public/widget.js?v=20260428b" data-api-url="${API_URL}" data-business-id="${selected?.id || ""}"></script>`;
+  const widgetScript = `<script src="${API_URL}/public/widget.js?v=20260428c" data-api-url="${API_URL}" data-business-id="${selected?.id || ""}"></script>`;
   const publicLinks = [
     ["Landing general", LANDING_URL],
     ["Soluciones por proyecto", PROJECTS_URL],
@@ -1194,11 +1249,34 @@ function AdminApp() {
               <article><strong>{dashboard?.appointmentsToday ?? 0}</strong><span>Citas hoy</span></article>
               <article><strong>{dashboard?.upcomingAppointments ?? 0}</strong><span>Próximas citas</span></article>
               <article><strong>{dashboard?.needsHuman ?? 0}</strong><span>Requieren humano</span></article>
+              <article><strong>{dashboard?.activeCustomers ?? 0}</strong><span>Contactos totales</span></article>
+              <article><strong>{dashboard?.conversations ?? 0}</strong><span>Mensajes registrados</span></article>
             </div>
             <div className="top-services">
               {dashboard?.topServices?.map((service) => (
                 <span key={service.name}>{service.name}: {service.count}</span>
               ))}
+            </div>
+          </div>}
+
+          {view === "dashboard" && <div className="panel dashboard-ops-panel">
+            <h2><Bot size={20} /> Centro de control</h2>
+            <div className="ops-grid">
+              <article>
+                <strong>Pendientes de seguimiento</strong>
+                <span>{dashboard?.needsHuman ?? 0} conversación(es) requieren respuesta humana.</span>
+                <small>Úsalo para cotizaciones, quejas o casos que el bot no debe cerrar solo.</small>
+              </article>
+              <article>
+                <strong>Vista del visitante</strong>
+                <span>{settingsForm.widgetTitle || selected?.widgetTitle || "Asistente"}</span>
+                <small>{settingsForm.widgetIntro || selected?.widgetIntro || "Texto de entrada del widget"}</small>
+              </article>
+              <article>
+                <strong>Agenda visual</strong>
+                <span>{dashboard?.upcomingAppointments ?? 0} cita(s) próximas y bloqueos en calendario.</span>
+                <small>Más adelante se puede conectar Google Calendar, pero por ahora el panel ya evita empalmes.</small>
+              </article>
             </div>
           </div>}
 
@@ -1290,9 +1368,9 @@ function AdminApp() {
               </label>
               <div className="form-section-title">Inicio del chat</div>
               <label>
-                <span>Título del widget</span>
-                <input value={settingsForm.widgetTitle || ""} onChange={(event) => setSettingsForm((current) => ({ ...current, widgetTitle: event.target.value }))} placeholder="Asistente" />
-                <small className="field-help">Es el encabezado que ve el visitante al abrir el chat.</small>
+                <span>Nombre visible del chat</span>
+                <input value={settingsForm.widgetTitle || ""} onChange={(event) => setSettingsForm((current) => ({ ...current, widgetTitle: event.target.value }))} placeholder="Asistente de cotizaciones" />
+                <small className="field-help">Aparece arriba del chat, como el nombre del asistente del negocio.</small>
               </label>
               <label>
                 <span>Texto antes de pedir datos</span>
@@ -1309,6 +1387,23 @@ function AdminApp() {
                 <input value={settingsForm.widgetPrompt || ""} onChange={(event) => setSettingsForm((current) => ({ ...current, widgetPrompt: event.target.value }))} placeholder="Necesito cotizar filtración de aceite hidráulico" />
                 <small className="field-help">Texto de ejemplo que aparece listo para que el visitante lo envíe o lo cambie.</small>
               </label>
+              <div className="widget-config-preview full-row">
+                <div className="widget-preview-header">
+                  <div className="widget-preview-avatar">AI</div>
+                  <div>
+                    <strong>{settingsForm.widgetTitle || "Asistente"}</strong>
+                    <span>{settingsForm.widgetIntro || "Deja tus datos para responderte."}</span>
+                  </div>
+                </div>
+                <div className="widget-preview-body">
+                  <p>{settingsForm.widgetInitialMessage || "Hola. Puedo ayudarte con servicios, cotizaciones y atención."}</p>
+                  <div className="widget-preview-options">
+                    <button type="button">Ver servicios</button>
+                    <button type="button">{selectedIsQuoteBased ? "Solicitar cotización" : "Agendar cita"}</button>
+                    <button type="button">Atención</button>
+                  </div>
+                </div>
+              </div>
               <div className="form-section-title">Canales de atención</div>
               <label>
                 <span>WhatsApp oficial opcional</span>
