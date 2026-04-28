@@ -23,14 +23,17 @@ import {
 } from "lucide-react";
 import "./styles.css";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
-const PUBLIC_APP_URL = (import.meta.env.VITE_PUBLIC_APP_URL || API_URL).replace(/\/$/, "");
+const rawApiUrl = import.meta.env.VITE_API_URL || "";
+const rawPublicAppUrl = import.meta.env.VITE_PUBLIC_APP_URL || "";
+const isBrowserProduction = typeof window !== "undefined" && !window.location.hostname.includes("localhost");
+const PUBLIC_APP_URL = (rawPublicAppUrl || rawApiUrl || "http://localhost:4000").replace(/\/$/, "");
+const API_URL = (rawApiUrl && !(rawApiUrl.includes("localhost") && isBrowserProduction) ? rawApiUrl : PUBLIC_APP_URL).replace(/\/$/, "");
 const FRONTEND_URL = window.location.origin;
 const LANDING_URL = `${PUBLIC_APP_URL}/landing.html`;
 const PROJECTS_URL = `${PUBLIC_APP_URL}/proyectos.html`;
 const DEMO_BARBERIA_URL = `${PUBLIC_APP_URL}/demo-barberia.html`;
 const DEMO_DENTAL_URL = `${PUBLIC_APP_URL}/demo-dental.html`;
-const ADMIN_URL = `${FRONTEND_URL}/admin`;
+const ADMIN_URL = (import.meta.env.VITE_ADMIN_URL || `${FRONTEND_URL}/admin`).replace(/\/$/, "");
 const LEAD_STATUSES = [
   ["all", "Todos"],
   ["nuevo", "Nuevos"],
