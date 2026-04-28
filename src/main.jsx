@@ -23,11 +23,22 @@ import {
 } from "lucide-react";
 import "./styles.css";
 
+const DEFAULT_LOCAL_BACKEND_URL = "http://localhost:4000";
+const DEFAULT_PRODUCTION_BACKEND_URL = "https://autochat-backend-production.up.railway.app";
 const rawApiUrl = import.meta.env.VITE_API_URL || "";
 const rawPublicAppUrl = import.meta.env.VITE_PUBLIC_APP_URL || "";
 const isBrowserProduction = typeof window !== "undefined" && !window.location.hostname.includes("localhost");
-const PUBLIC_APP_URL = (rawPublicAppUrl || rawApiUrl || "http://localhost:4000").replace(/\/$/, "");
-const API_URL = (rawApiUrl && !(rawApiUrl.includes("localhost") && isBrowserProduction) ? rawApiUrl : PUBLIC_APP_URL).replace(/\/$/, "");
+function cleanConfiguredUrl(value) {
+  const url = String(value || "").trim();
+  if (!url) return "";
+  const normalized = url.toLowerCase();
+  if (normalized.includes("tu-backend-railway") || normalized.includes("your-backend")) return "";
+  if (normalized.includes("localhost") && isBrowserProduction) return "";
+  return url.replace(/\/$/, "");
+}
+const fallbackBackendUrl = isBrowserProduction ? DEFAULT_PRODUCTION_BACKEND_URL : DEFAULT_LOCAL_BACKEND_URL;
+const API_URL = cleanConfiguredUrl(rawApiUrl) || cleanConfiguredUrl(rawPublicAppUrl) || fallbackBackendUrl;
+const PUBLIC_APP_URL = cleanConfiguredUrl(rawPublicAppUrl) || API_URL;
 const FRONTEND_URL = window.location.origin;
 const LANDING_URL = `${PUBLIC_APP_URL}/landing.html`;
 const PROJECTS_URL = `${PUBLIC_APP_URL}/proyectos.html`;
