@@ -162,6 +162,59 @@ nav button.active, nav button:hover { background: #294139; }
   font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
   font-size: 13px;
 }
+.client-create-panel,
+.client-list-panel,
+.recent-leads-panel {
+  display: grid;
+  gap: 12px;
+}
+.client-template-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.client-template-form label {
+  display: grid;
+  gap: 6px;
+}
+.client-template-form span {
+  color: #526158;
+  font-size: 13px;
+  font-weight: 800;
+}
+.client-template-form button {
+  grid-column: 1 / -1;
+}
+.client-cards {
+  display: grid;
+  gap: 10px;
+}
+.client-cards article {
+  border: 1px solid #e2e6df;
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+.client-cards article > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+.client-cards span,
+.client-cards small {
+  color: #647168;
+}
+.client-cards > article > button {
+  min-height: 36px;
+  border: 0;
+  border-radius: 8px;
+  background: #294139;
+  color: #fff;
+  padding: 0 12px;
+  cursor: pointer;
+}
 .link-list {
   display: grid;
   gap: 8px;
@@ -1231,7 +1284,9 @@ form button, .quick-actions button {
   .public-split,
   .diagnosis-wrap,
   .cta-contact-wrap,
-  .diagnosis-mini-grid { grid-template-columns: 1fr; }
+  .diagnosis-mini-grid,
+  .client-template-form { grid-template-columns: 1fr; }
+  .client-cards article { align-items: stretch; flex-direction: column; }
   .public-section { padding: 54px 18px; }
   .public-preview { min-height: 280px; }
   .react-widget-root { right: 12px; bottom: 12px; }

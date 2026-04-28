@@ -8,6 +8,7 @@ import {
   Clock,
   HelpCircle,
   Inbox,
+  BriefcaseBusiness,
   MessageSquareText,
   RefreshCw,
   Scissors,
@@ -52,6 +53,53 @@ const LEAD_STATUSES = [
   ["cita_agendada", "Cita agendada"],
   ["perdido", "Perdidos"]
 ];
+const CLIENT_TEMPLATES = {
+  industrial: {
+    label: "Industrial / cotizaciones",
+    niche: "industrial",
+    hours: "Lunes a viernes de 8:00 a 18:00",
+    tone: "técnico, claro y profesional",
+    services: [
+      { name: "Filtración de aceite hidráulico", durationMinutes: 60, price: 0, bufferMinutes: 10 },
+      { name: "Lubricación industrial", durationMinutes: 60, price: 0, bufferMinutes: 10 },
+      { name: "Análisis de aceite", durationMinutes: 45, price: 0, bufferMinutes: 10 },
+      { name: "Cotización de servicio en planta", durationMinutes: 60, price: 0, bufferMinutes: 10 }
+    ],
+    faqs: [
+      { question: "¿Qué datos necesitan para cotizar?", answer: "Empresa, ubicación, servicio requerido, tipo de equipo, capacidad aproximada y urgencia." },
+      { question: "¿Atienden servicios en planta?", answer: "Sí. El asistente captura ubicación y datos técnicos para preparar la cotización." },
+      { question: "¿Pueden atender urgencias?", answer: "El asistente marca la solicitud como prioritaria para seguimiento humano." }
+    ]
+  },
+  servicios: {
+    label: "Servicios generales",
+    niche: "servicios",
+    hours: "Lunes a viernes de 9:00 a 18:00",
+    tone: "amable, directo y comercial",
+    services: [
+      { name: "Cotización", durationMinutes: 30, price: 0, bufferMinutes: 10 },
+      { name: "Visita técnica", durationMinutes: 60, price: 0, bufferMinutes: 10 },
+      { name: "Seguimiento comercial", durationMinutes: 30, price: 0, bufferMinutes: 10 }
+    ],
+    faqs: [
+      { question: "¿Cómo solicito una cotización?", answer: "Comparte nombre, teléfono, servicio, ubicación y detalles del proyecto." },
+      { question: "¿Cuándo me contactan?", answer: "El equipo revisa la solicitud y da seguimiento con la información capturada." }
+    ]
+  },
+  citas: {
+    label: "Citas / agenda",
+    niche: "estetica",
+    hours: "Lunes a sábado de 10:00 a 20:00",
+    tone: "amable y profesional",
+    services: [
+      { name: "Servicio principal", durationMinutes: 45, price: 0, bufferMinutes: 10 },
+      { name: "Valoración", durationMinutes: 30, price: 0, bufferMinutes: 10 }
+    ],
+    faqs: [
+      { question: "¿Puedo agendar por chat?", answer: "Sí. El asistente pide servicio, día, hora y nombre para registrar la solicitud." }
+    ]
+  }
+};
 const DAYS = [
   ["1", "Lunes"],
   ["2", "Martes"],
@@ -365,10 +413,11 @@ function App() {
 
 function AdminApp() {
   const [token, setToken] = useState(() => localStorage.getItem("autochat_token") || "");
-  const [view, setView] = useState("dashboard");
+  const [view, setView] = useState("clients");
   const [loginForm, setLoginForm] = useState({ email: "admin@autochat.test", password: "123456" });
   const [businesses, setBusinesses] = useState([]);
   const [selectedId, setSelectedId] = useState("");
+  const [mainDashboard, setMainDashboard] = useState(null);
   const [conversations, setConversations] = useState([]);
   const [appointments, setAppointments] = useState([]);
   const [staff, setStaff] = useState([]);
@@ -407,6 +456,7 @@ function AdminApp() {
   const [manualReply, setManualReply] = useState({ customerId: "", text: "" });
   const [templateForm, setTemplateForm] = useState({ id: "", key: "", name: "", body: "", active: true });
   const [staffForm, setStaffForm] = useState({ name: "", serviceIds: [] });
+  const [clientForm, setClientForm] = useState({ name: "", phone: "", address: "", template: "industrial" });
 
   const selected = useMemo(
     () => businesses.find((business) => business.id === selectedId) || businesses[0],
@@ -452,7 +502,8 @@ function AdminApp() {
 
   async function loadData(businessId = selected?.id) {
     if (!token) return;
-    const [businessRes, conversationsRes, appointmentsRes, staffRes, blocksRes, customersRes, dashboardRes, inboxRes, templatesRes, remindersRes, calendarRes] = await Promise.all([
+    const [mainDashboardRes, businessRes, conversationsRes, appointmentsRes, staffRes, blocksRes, customersRes, dashboardRes, inboxRes, templatesRes, remindersRes, calendarRes] = await Promise.all([
+      apiFetch(`/api/dashboard`),
       apiFetch(`/api/businesses`),
       apiFetch(`/api/conversations${businessId ? `?businessId=${businessId}` : ""}`),
       businessId ? apiFetch(`/api/appointments?businessId=${businessId}`) : Promise.resolve({ json: async () => [] }),
@@ -466,6 +517,7 @@ function AdminApp() {
       businessId ? apiFetch(`/api/calendar/${businessId}`) : Promise.resolve({ json: async () => null })
     ]);
 
+    setMainDashboard(await mainDashboardRes.json());
     const businessData = await businessRes.json();
     setBusinesses(businessData);
     if (!selectedId && businessData[0]) setSelectedId(businessData[0].id);
@@ -600,6 +652,37 @@ function AdminApp() {
     const body = await response.json();
     setNotice(response.ok ? "Configuración guardada." : body.error || "No se pudo guardar.");
     await loadData(selected.id);
+  }
+
+  async function createClient(event) {
+    event.preventDefault();
+    const template = CLIENT_TEMPLATES[clientForm.template] || CLIENT_TEMPLATES.industrial;
+    if (!clientForm.name.trim()) return;
+    const response = await apiFetch("/api/businesses", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: clientForm.name,
+        phone: clientForm.phone,
+        address: clientForm.address,
+        niche: template.niche,
+        hours: template.hours,
+        tone: template.tone,
+        whatsappProvider: "none",
+        services: template.services,
+        faqs: template.faqs
+      })
+    });
+    const body = await response.json();
+    if (!response.ok) {
+      setNotice(body.error || "No se pudo crear el cliente.");
+      return;
+    }
+    setClientForm({ name: "", phone: "", address: "", template: "industrial" });
+    setSelectedId(body.id);
+    setView("settings");
+    setNotice("Cliente creado con plantilla. Revisa su configuración antes de instalar el widget.");
+    await loadData(body.id);
   }
 
   function updateScheduleDay(day, field, value) {
@@ -925,6 +1008,14 @@ function AdminApp() {
         <button className="logout" type="button" onClick={logout}><LogOut size={18} /> Salir</button>
         <div className="view-switch" aria-label="Secciones">
           <button
+            className={view === "clients" ? "active" : ""}
+            type="button"
+            onClick={() => setView("clients")}
+          >
+            <BriefcaseBusiness size={18} />
+            <span>Clientes</span>
+          </button>
+          <button
             className={view === "dashboard" ? "active" : ""}
             type="button"
             onClick={() => setView("dashboard")}
@@ -959,15 +1050,60 @@ function AdminApp() {
       <section className="content">
         <header className="topbar">
           <div>
-            <p>{selected?.niche?.replace("_", " ")}</p>
-            <h1>{view === "settings" ? "Configuración" : selected?.name || "AutoChat"}</h1>
+            <p>{view === "clients" ? "panel principal" : selected?.niche?.replace("_", " ")}</p>
+            <h1>{view === "clients" ? "Clientes y oportunidades" : view === "settings" ? "Configuración" : selected?.name || "AutoChat"}</h1>
           </div>
-          <span>{view === "settings" ? selected?.name : "Asistente web + captura de leads"}</span>
+          <span>{view === "clients" ? "Vista general de proyectos" : view === "settings" ? selected?.name : "Asistente web + captura de leads"}</span>
         </header>
 
         {notice && <button className="notice" onClick={() => setNotice("")}>{notice}</button>}
 
         <section className="grid">
+          {view === "clients" && <div className="panel metrics-panel">
+            <h2><BriefcaseBusiness size={20} /> Operación general</h2>
+            <div className="metrics">
+              <article><strong>{mainDashboard?.totals?.clients ?? 0}</strong><span>Clientes/proyectos</span></article>
+              <article><strong>{mainDashboard?.totals?.newLeads ?? 0}</strong><span>Leads nuevos</span></article>
+              <article><strong>{mainDashboard?.totals?.needsHuman ?? 0}</strong><span>Requieren atención</span></article>
+              <article><strong>{mainDashboard?.totals?.upcomingAppointments ?? 0}</strong><span>Citas próximas</span></article>
+            </div>
+          </div>}
+
+          {view === "clients" && <div className="panel client-create-panel">
+            <h2><Plus size={20} /> Nuevo cliente</h2>
+            <p className="panel-copy">Crea un espacio separado por cliente. Cada uno tendrá su configuración, widget, leads, conversaciones y agenda.</p>
+            <form className="client-template-form" onSubmit={createClient}>
+              <label><span>Nombre del cliente</span><input value={clientForm.name} onChange={(event) => setClientForm((current) => ({ ...current, name: event.target.value }))} placeholder="Filtración y Lubricación Industrial" /></label>
+              <label><span>Teléfono</span><input value={clientForm.phone} onChange={(event) => setClientForm((current) => ({ ...current, phone: event.target.value }))} placeholder="+52..." /></label>
+              <label><span>Ubicación o zona</span><input value={clientForm.address} onChange={(event) => setClientForm((current) => ({ ...current, address: event.target.value }))} placeholder="Querétaro, Bajío, CDMX..." /></label>
+              <label><span>Plantilla</span><select value={clientForm.template} onChange={(event) => setClientForm((current) => ({ ...current, template: event.target.value }))}>{Object.entries(CLIENT_TEMPLATES).map(([value, template]) => <option key={value} value={value}>{template.label}</option>)}</select></label>
+              <button type="submit"><Plus size={18} /> Crear cliente</button>
+            </form>
+          </div>}
+
+          {view === "clients" && <div className="panel client-list-panel">
+            <h2><BriefcaseBusiness size={20} /> Clientes configurados</h2>
+            <div className="client-cards">
+              {(mainDashboard?.clients || businesses).map((business) => (
+                <article key={business.id}>
+                  <div><strong>{business.name}</strong><span>{business.niche?.replace("_", " ")}{business.phone ? ` · ${business.phone}` : ""}</span><small>{business.leads ?? 0} leads · {business.conversations ?? 0} mensajes · {business.appointments ?? 0} citas</small></div>
+                  <div className="mini-actions"><button type="button" onClick={() => { setSelectedId(business.id); setView("dashboard"); }}>Dashboard</button><button type="button" onClick={() => { setSelectedId(business.id); setView("settings"); }}>Configuración</button></div>
+                </article>
+              ))}
+            </div>
+          </div>}
+
+          {view === "clients" && <div className="panel recent-leads-panel">
+            <h2><Inbox size={20} /> Últimos interesados</h2>
+            <div className="client-cards">
+              {(mainDashboard?.recentLeads || []).map((lead) => (
+                <article key={lead.id}>
+                  <div><strong>{lead.name}</strong><span>{lead.business?.name} · {lead.phone}{lead.email ? ` · ${lead.email}` : ""}</span><small>{lead.conversations?.[0]?.inboundText || lead.notes || "Lead capturado"}</small></div>
+                  <button type="button" onClick={() => { setSelectedId(lead.businessId); setSelectedLeadId(lead.id); setView("dashboard"); }}>Abrir</button>
+                </article>
+              ))}
+            </div>
+          </div>}
           {view === "dashboard" && <div className="panel metrics-panel">
             <h2>Dashboard web</h2>
             <div className="metrics">
