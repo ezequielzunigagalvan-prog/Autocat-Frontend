@@ -61,11 +61,18 @@ const SEGMENT_OPTIONS = [
   ["educacion", "Educación / cursos"],
   ["estetica", "Citas / agenda"]
 ];
+const AUTOMATION_TYPE_OPTIONS = [
+  ["appointment", "Agenda / citas"],
+  ["quote", "Cotizaciones"],
+  ["lead", "Captura de leads"],
+  ["hybrid", "Mixto"]
+];
 const QUOTE_SEGMENTS = ["industrial", "servicios", "proyectos", "inmobiliaria", "educacion"];
 const CLIENT_TEMPLATES = {
   industrial: {
     label: "Industrial / cotizaciones",
     niche: "industrial",
+    automationType: "quote",
     hours: "Lunes a viernes de 8:00 a 18:00",
     tone: "técnico, claro y profesional",
     widgetInitialMessage: "Hola. Puedo ayudarte con servicios de filtración, lubricación industrial y solicitudes de cotización. Cuéntame qué servicio necesitas y en qué planta o ciudad se requiere.",
@@ -88,6 +95,7 @@ const CLIENT_TEMPLATES = {
   servicios: {
     label: "Servicios generales",
     niche: "servicios",
+    automationType: "quote",
     hours: "Lunes a viernes de 9:00 a 18:00",
     tone: "amable, directo y comercial",
     widgetInitialMessage: "Hola. Puedo ayudarte a registrar tu solicitud y preparar una cotización. Cuéntame qué servicio necesitas.",
@@ -107,6 +115,7 @@ const CLIENT_TEMPLATES = {
   salud: {
     label: "Salud / consultorios",
     niche: "salud",
+    automationType: "lead",
     hours: "Lunes a viernes de 9:00 a 18:00",
     tone: "profesional, empático y claro",
     widgetInitialMessage: "Hola. Puedo orientarte con información general y registrar tu solicitud para seguimiento del equipo.",
@@ -125,6 +134,7 @@ const CLIENT_TEMPLATES = {
   inmobiliaria: {
     label: "Inmobiliaria",
     niche: "inmobiliaria",
+    automationType: "hybrid",
     hours: "Lunes a sábado de 9:00 a 19:00",
     tone: "comercial, claro y orientado a calificar prospectos",
     widgetInitialMessage: "Hola. Puedo ayudarte a encontrar, rentar, vender o agendar una visita. Cuéntame qué estás buscando.",
@@ -143,6 +153,7 @@ const CLIENT_TEMPLATES = {
   educacion: {
     label: "Educación / cursos",
     niche: "educacion",
+    automationType: "lead",
     hours: "Lunes a viernes de 9:00 a 18:00",
     tone: "claro, amable y orientado a inscripción",
     widgetInitialMessage: "Hola. Puedo ayudarte con información de cursos, horarios, modalidad e inscripción.",
@@ -160,6 +171,7 @@ const CLIENT_TEMPLATES = {
   citas: {
     label: "Citas / agenda",
     niche: "estetica",
+    automationType: "appointment",
     hours: "Lunes a sábado de 10:00 a 20:00",
     tone: "amable y profesional",
     widgetInitialMessage: "Hola. Puedo ayudarte con servicios, horarios y solicitudes de cita.",
@@ -590,7 +602,10 @@ function AdminApp() {
     () => businesses.find((business) => business.id === selectedId) || businesses[0],
     [businesses, selectedId]
   );
-  const selectedIsQuoteBased = QUOTE_SEGMENTS.includes(settingsForm.niche || selected?.niche);
+  const selectedAutomationType = settingsForm.automationType || selected?.automationType || "";
+  const selectedIsQuoteBased = selectedAutomationType
+    ? ["quote", "hybrid"].includes(selectedAutomationType)
+    : QUOTE_SEGMENTS.includes(settingsForm.niche || selected?.niche);
 
   function authHeaders(extra = {}) {
     return { ...extra, Authorization: `Bearer ${token}` };
@@ -682,6 +697,7 @@ function AdminApp() {
     setSettingsForm({
       name: selected.name || "",
       niche: selected.niche || "servicios",
+      automationType: selected.automationType || "appointment",
       phone: selected.phone || "",
       address: selected.address || "",
       hours: selected.hours || "",
@@ -800,6 +816,7 @@ function AdminApp() {
         phone: clientForm.phone,
         address: clientForm.address,
         niche: template.niche,
+        automationType: template.automationType,
         hours: template.hours,
         tone: template.tone,
         widgetTitle: "Asistente",
@@ -1350,7 +1367,14 @@ function AdminApp() {
                 <select value={settingsForm.niche || "servicios"} onChange={(event) => setSettingsForm((current) => ({ ...current, niche: event.target.value }))}>
                   {SEGMENT_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                 </select>
-                <small className="field-help">Define si el bot debe operar como agenda, cotizador, capturador de prospectos o atención inicial.</small>
+                <small className="field-help">Describe el giro del cliente. Sirve para plantillas, tono y ejemplos.</small>
+              </label>
+              <label>
+                <span>Tipo de automatización</span>
+                <select value={settingsForm.automationType || "appointment"} onChange={(event) => setSettingsForm((current) => ({ ...current, automationType: event.target.value }))}>
+                  {AUTOMATION_TYPE_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                </select>
+                <small className="field-help">Define el comportamiento principal del bot: agenda, cotización, captura simple o mixto.</small>
               </label>
               <label>
                 <span>Teléfono</span>
