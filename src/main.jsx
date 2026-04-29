@@ -10,7 +10,6 @@ import {
   Inbox,
   BriefcaseBusiness,
   MessageSquareText,
-  RefreshCw,
   Scissors,
   Send,
   Settings,
@@ -709,6 +708,185 @@ function ConversationsPanel({ conversations = [], customers = [], selectedBusine
   );
 }
 
+function toICSDate(value) {
+  return new Date(value).toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+}
+
+function escapeICS(value) {
+  return String(value || "")
+    .replace(/\\/g, "\\\\")
+    .replace(/\n/g, "\\n")
+    .replace(/,/g, "\\,")
+    .replace(/;/g, "\\;");
+}
+
+function downloadAppointmentICS(appointment, business) {
+  const start = new Date(appointment.startsAt);
+  const duration = appointment.service?.durationMinutes || appointment.durationMinutes || 45;
+  const end = new Date(start.getTime() + duration * 60 * 1000);
+  const safeCustomerName = (appointment.customerName || "cliente").replace(/[^\w-]+/g, "-").replace(/^-+|-+$/g, "") || "cliente";
+
+  const title = `${appointment.serviceName || "Cita"} - ${business?.name || "AutoChat"}`;
+  const description = [
+    `Cliente: ${appointment.customerName || ""}`,
+    `Teléfono: ${appointment.customerPhone || ""}`,
+    `Servicio: ${appointment.serviceName || ""}`,
+    `Notas: ${appointment.notes || ""}`
+  ].join("\n");
+
+  const ics = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//AutoChat//Appointments//ES",
+    "BEGIN:VEVENT",
+    `UID:${appointment.id}@autochat`,
+    `DTSTAMP:${toICSDate(new Date())}`,
+    `DTSTART:${toICSDate(start)}`,
+    `DTEND:${toICSDate(end)}`,
+    `SUMMARY:${escapeICS(title)}`,
+    `DESCRIPTION:${escapeICS(description)}`,
+    "END:VEVENT",
+    "END:VCALENDAR"
+  ].join("\r\n");
+
+  const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = `cita-${safeCustomerName}.ics`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+function AppointmentsPanel({
+  appointments = [],
+  calendar,
+  selectedBusiness,
+  cancelAppointment,
+  rescheduleForm,
+  setRescheduleForm,
+  rescheduleAppointment
+}) {
+  const upcoming = appointments
+    .filter((item) => ["confirmed", "hold"].includes(item.status))
+    .sort((a, b) => new Date(a.startsAt) - new Date(b.startsAt));
+
+  const past = appointments
+    .filter((item) => !["confirmed", "hold"].includes(item.status))
+    .sort((a, b) => new Date(b.startsAt) - new Date(a.startsAt));
+
+  return (
+    <div className="appointments-layout">
+      <section className="panel appointments-main-panel">
+        <div className="panel-heading">
+          <div>
+            <h2><CalendarDays size={20} /> Citas programadas</h2>
+            <p>Agenda de {selectedBusiness?.name || "este negocio"}.</p>
+          </div>
+        </div>
+
+        {!upcoming.length && (
+          <div className="empty-state">
+            <CalendarX size={30} />
+            <strong>No hay citas próximas</strong>
+            <span>Cuando el asistente agende una cita, aparecerá aquí.</span>
+          </div>
+        )}
+
+        <div className="appointment-list">
+          {upcoming.map((appointment) => (
+            <article key={appointment.id} className="appointment-card">
+              <div className="appointment-date">
+                <strong>{new Date(appointment.startsAt).toLocaleDateString("es-MX", { day: "2-digit", month: "short" })}</strong>
+                <span>{new Date(appointment.startsAt).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}</span>
+              </div>
+
+              <div className="appointment-info">
+                <strong>{appointment.serviceName}</strong>
+                <span>{appointment.customerName} · {appointment.customerPhone}</span>
+                <small>{appointment.notes || "Sin notas"}</small>
+              </div>
+
+              <div className="appointment-status">
+                <span className={`status-pill ${appointment.status}`}>{appointment.status}</span>
+              </div>
+
+              <div className="appointment-actions">
+                <button type="button" onClick={() => downloadAppointmentICS(appointment, selectedBusiness)}>
+                  Agregar a calendario
+                </button>
+                <button type="button" onClick={() => setRescheduleForm({ appointmentId: appointment.id, startsAt: toDatetimeLocal(appointment.startsAt) })}>
+                  Reagendar
+                </button>
+                <button type="button" className="danger" onClick={() => cancelAppointment(appointment.id)}>
+                  Cancelar
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="panel appointment-side-panel">
+        <h2><Clock size={20} /> Reagendar cita</h2>
+        <form onSubmit={rescheduleAppointment} className="appointment-reschedule-form">
+          <label>
+            <span>Cita</span>
+            <select
+              value={rescheduleForm.appointmentId}
+              onChange={(event) => setRescheduleForm((current) => ({ ...current, appointmentId: event.target.value }))}
+            >
+              <option value="">Selecciona cita</option>
+              {upcoming.map((appointment) => (
+                <option key={appointment.id} value={appointment.id}>
+                  {appointment.customerName} · {appointment.serviceName} · {formatDate(appointment.startsAt)}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            <span>Nueva fecha y hora</span>
+            <input
+              type="datetime-local"
+              value={rescheduleForm.startsAt}
+              onChange={(event) => setRescheduleForm((current) => ({ ...current, startsAt: event.target.value }))}
+            />
+          </label>
+
+          <button type="submit">Guardar cambio</button>
+        </form>
+
+        <div className="mini-calendar">
+          <h3>Vista semanal</h3>
+          {(calendar?.appointments || []).slice(0, 8).map((item) => (
+            <div key={item.id} className="mini-calendar-item">
+              <strong>{item.serviceName}</strong>
+              <span>{item.customerName} · {formatDate(item.startsAt)}</span>
+            </div>
+          ))}
+          {!calendar?.appointments?.length && <span>No hay citas esta semana.</span>}
+        </div>
+
+        {!!past.length && (
+          <div className="past-appointments">
+            <h3>Historial reciente</h3>
+            {past.slice(0, 6).map((appointment) => (
+              <div key={appointment.id}>
+                <strong>{appointment.customerName}</strong>
+                <span>{appointment.serviceName} · {appointment.status}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
 function App() {
   const path = window.location.pathname.replace(/\/$/, "") || "/";
   if (path === "/admin" || window.location.hash === "#admin") return <AdminApp />;
@@ -1246,9 +1424,6 @@ function AdminApp() {
     });
   }
 
-  const visibleAppointments = appointments.filter((appointment) =>
-    ["confirmed", "hold"].includes(appointment.status)
-  );
   const selectedLead = inbox.find((customer) => customer.id === selectedLeadId) || inbox[0];
   const widgetScript = `<script src="${API_URL}/public/widget.js?v=20260428c" data-api-url="${API_URL}" data-business-id="${selected?.id || ""}"></script>`;
   const publicLinks = [
@@ -1353,6 +1528,14 @@ function AdminApp() {
             <span>Conversaciones</span>
           </button>
           <button
+            className={view === "appointments" ? "active" : ""}
+            type="button"
+            onClick={() => setView("appointments")}
+          >
+            <CalendarDays size={18} />
+            <span>Citas</span>
+          </button>
+          <button
             className={view === "settings" ? "active" : ""}
             type="button"
             onClick={() => setView("settings")}
@@ -1380,9 +1563,9 @@ function AdminApp() {
         <header className="topbar">
           <div>
             <p>{view === "clients" ? "panel principal" : selected?.niche?.replace("_", " ")}</p>
-            <h1>{view === "clients" ? "Clientes y oportunidades" : view === "settings" ? "Configuración" : view === "conversations" ? "Conversaciones" : selected?.name || "AutoChat"}</h1>
+            <h1>{view === "clients" ? "Clientes y oportunidades" : view === "settings" ? "Configuración" : view === "conversations" ? "Conversaciones" : view === "appointments" ? "Citas" : selected?.name || "AutoChat"}</h1>
           </div>
-          <span>{view === "clients" ? "Vista general de proyectos" : view === "settings" ? selected?.name : view === "conversations" ? selected?.name || "Historial de chats" : "Asistente web + captura de leads"}</span>
+          <span>{view === "clients" ? "Vista general de proyectos" : view === "settings" ? selected?.name : view === "conversations" ? selected?.name || "Historial de chats" : view === "appointments" ? selected?.name || "Agenda del negocio" : "Asistente web + captura de leads"}</span>
         </header>
 
         {notice && <button className="notice" onClick={() => setNotice("")}>{notice}</button>}
@@ -1393,6 +1576,18 @@ function AdminApp() {
               conversations={conversations}
               customers={customers}
               selectedBusiness={selected}
+            />
+          )}
+
+          {view === "appointments" && (
+            <AppointmentsPanel
+              appointments={appointments}
+              calendar={calendar}
+              selectedBusiness={selected}
+              cancelAppointment={cancelAppointment}
+              rescheduleForm={rescheduleForm}
+              setRescheduleForm={setRescheduleForm}
+              rescheduleAppointment={rescheduleAppointment}
             />
           )}
 
@@ -2062,56 +2257,6 @@ function AdminApp() {
                 </article>
               ))}
             </div>
-          </div>}
-
-          {view === "dashboard" && <div className="panel appointments-panel">
-            <h2><CalendarDays size={20} /> Citas</h2>
-            {visibleAppointments.length === 0 ? (
-              <p className="empty">Aún no hay citas activas.</p>
-            ) : visibleAppointments.map((appointment) => (
-              <article key={appointment.id}>
-                <div>
-                  <strong>{appointment.customerName}</strong>
-                  <span>{appointment.serviceName}</span>
-                  <time><Clock size={14} /> {formatDate(appointment.startsAt)}</time>
-                  {appointment.status === "hold" && <small>Apartada hasta {formatDate(appointment.holdExpiresAt)}</small>}
-                </div>
-                <div className="row-actions">
-                  <button type="button" onClick={() => cancelAppointment(appointment.id)} aria-label="Cancelar cita">
-                    <XCircle size={18} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRescheduleForm({ appointmentId: appointment.id, startsAt: toDatetimeLocal(appointment.startsAt) })}
-                    aria-label="Reagendar cita"
-                  >
-                    <RefreshCw size={18} />
-                  </button>
-                </div>
-              </article>
-            ))}
-
-            <form className="reschedule-form" onSubmit={rescheduleAppointment}>
-              <select
-                value={rescheduleForm.appointmentId}
-                onChange={(event) => setRescheduleForm((current) => ({ ...current, appointmentId: event.target.value }))}
-                aria-label="Cita"
-              >
-                <option value="">Seleccionar cita</option>
-                {visibleAppointments.map((appointment) => (
-                  <option key={appointment.id} value={appointment.id}>
-                    {appointment.customerName} - {appointment.serviceName}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="datetime-local"
-                value={rescheduleForm.startsAt}
-                onChange={(event) => setRescheduleForm((current) => ({ ...current, startsAt: event.target.value }))}
-                aria-label="Nueva fecha"
-              />
-              <button type="submit"><RefreshCw size={18} /> Reagendar</button>
-            </form>
           </div>}
 
           {view === "dashboard" && <div className="panel customers-panel">
