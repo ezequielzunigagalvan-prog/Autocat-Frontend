@@ -543,6 +543,172 @@ function PublicFooter({ label = "AutoChat Web" }) {
   return <footer className="public-footer"><div className="public-inner"><strong>{label}</strong><span>Automatización web personalizada para negocios.</span></div></footer>;
 }
 
+function ConversationsPanel({ conversations = [], customers = [], selectedBusiness }) {
+  const [selectedFrom, setSelectedFrom] = useState("");
+
+  const conversationsByCustomer = useMemo(() => {
+    const groups = {};
+
+    conversations.forEach((conversation) => {
+      const key = conversation.from || "unknown";
+
+      if (!groups[key]) {
+        const customer = customers.find((item) => item.phone === key);
+
+        groups[key] = {
+          from: key,
+          customer,
+          lastMessageAt: conversation.createdAt,
+          messages: []
+        };
+      }
+
+      groups[key].messages.push(conversation);
+    });
+
+    return Object.values(groups)
+      .map((group) => {
+        const messages = group.messages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+        return {
+          ...group,
+          messages,
+          lastMessageAt: messages[messages.length - 1]?.createdAt
+        };
+      })
+      .sort((a, b) => new Date(b.lastMessageAt) - new Date(a.lastMessageAt));
+  }, [conversations, customers]);
+
+  const selectedThread =
+    conversationsByCustomer.find((thread) => thread.from === selectedFrom) ||
+    conversationsByCustomer[0];
+
+  useEffect(() => {
+    if (!selectedFrom && conversationsByCustomer[0]) {
+      setSelectedFrom(conversationsByCustomer[0].from);
+    }
+  }, [conversationsByCustomer, selectedFrom]);
+
+  function getLeadStatusLabel(status) {
+    const labels = {
+      nuevo: "Nuevo",
+      contactado: "Contactado",
+      cita_agendada: "Cita agendada",
+      perdido: "Perdido"
+    };
+
+    return labels[status] || status || "Sin estado";
+  }
+
+  return (
+    <div className="conversations-layout">
+      <section className="panel conversations-list-panel">
+        <div className="panel-heading">
+          <div>
+            <h2><MessageSquareText size={20} /> Conversaciones</h2>
+            <p>Chats recibidos para {selectedBusiness?.name || "este negocio"}.</p>
+          </div>
+        </div>
+
+        {!conversationsByCustomer.length && (
+          <div className="empty-state">
+            <MessageSquareText size={28} />
+            <strong>No hay conversaciones todavía</strong>
+            <span>Cuando alguien use el widget, aparecerá aquí.</span>
+          </div>
+        )}
+
+        <div className="conversation-list">
+          {conversationsByCustomer.map((thread) => {
+            const last = thread.messages[thread.messages.length - 1];
+            const isActive = selectedThread?.from === thread.from;
+
+            return (
+              <button
+                key={thread.from}
+                className={isActive ? "conversation-item active" : "conversation-item"}
+                type="button"
+                onClick={() => setSelectedFrom(thread.from)}
+              >
+                <div className="conversation-avatar">
+                  {(thread.customer?.name || thread.from || "?").slice(0, 1).toUpperCase()}
+                </div>
+
+                <div className="conversation-meta">
+                  <strong>{thread.customer?.name || thread.from}</strong>
+                  <span>{last?.inboundText || last?.outboundText || "Sin mensaje"}</span>
+                  <small>{last?.createdAt ? formatDate(last.createdAt) : ""}</small>
+                </div>
+
+                <em>{getLeadStatusLabel(thread.customer?.leadStatus)}</em>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="panel conversation-detail-panel">
+        {!selectedThread ? (
+          <div className="empty-state">
+            <Inbox size={32} />
+            <strong>Selecciona una conversación</strong>
+            <span>Aquí verás el historial completo del chat.</span>
+          </div>
+        ) : (
+          <>
+            <header className="conversation-detail-header">
+              <div>
+                <h2>{selectedThread.customer?.name || selectedThread.from}</h2>
+                <span>{selectedThread.from}</span>
+              </div>
+
+              <div className="conversation-status">
+                <strong>{getLeadStatusLabel(selectedThread.customer?.leadStatus)}</strong>
+                {selectedThread.customer?.needsHuman && <span>Requiere atención</span>}
+              </div>
+            </header>
+
+            <div className="conversation-customer-card">
+              <div>
+                <strong>Datos capturados</strong>
+                <span>Nombre: {selectedThread.customer?.name || "Sin nombre"}</span>
+                <span>Teléfono: {selectedThread.customer?.phone || selectedThread.from}</span>
+                <span>Email: {selectedThread.customer?.email || "Sin correo"}</span>
+              </div>
+
+              <div>
+                <strong>Notas</strong>
+                <span>{selectedThread.customer?.notes || "Sin notas registradas"}</span>
+              </div>
+            </div>
+
+            <div className="chat-thread">
+              {selectedThread.messages.map((message) => (
+                <React.Fragment key={message.id}>
+                  {message.inboundText && (
+                    <div className="chat-bubble user">
+                      <span>Cliente</span>
+                      <p>{message.inboundText}</p>
+                      <small>{formatDate(message.createdAt)}</small>
+                    </div>
+                  )}
+
+                  {message.outboundText && (
+                    <div className="chat-bubble bot">
+                      <span>{message.handledBy === "human" ? "Humano" : "AutoChat"}</span>
+                      <p>{message.outboundText}</p>
+                      <small>{message.status}</small>
+                    </div>
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
+          </>
+        )}
+      </section>
+    </div>
+  );
+}
+
 function App() {
   const path = window.location.pathname.replace(/\/$/, "") || "/";
   if (path === "/admin" || window.location.hash === "#admin") return <AdminApp />;
@@ -1179,6 +1345,14 @@ function AdminApp() {
             <span>Dashboard</span>
           </button>
           <button
+            className={view === "conversations" ? "active" : ""}
+            type="button"
+            onClick={() => setView("conversations")}
+          >
+            <MessageSquareText size={18} />
+            <span>Conversaciones</span>
+          </button>
+          <button
             className={view === "settings" ? "active" : ""}
             type="button"
             onClick={() => setView("settings")}
@@ -1206,14 +1380,22 @@ function AdminApp() {
         <header className="topbar">
           <div>
             <p>{view === "clients" ? "panel principal" : selected?.niche?.replace("_", " ")}</p>
-            <h1>{view === "clients" ? "Clientes y oportunidades" : view === "settings" ? "Configuración" : selected?.name || "AutoChat"}</h1>
+            <h1>{view === "clients" ? "Clientes y oportunidades" : view === "settings" ? "Configuración" : view === "conversations" ? "Conversaciones" : selected?.name || "AutoChat"}</h1>
           </div>
-          <span>{view === "clients" ? "Vista general de proyectos" : view === "settings" ? selected?.name : "Asistente web + captura de leads"}</span>
+          <span>{view === "clients" ? "Vista general de proyectos" : view === "settings" ? selected?.name : view === "conversations" ? selected?.name || "Historial de chats" : "Asistente web + captura de leads"}</span>
         </header>
 
         {notice && <button className="notice" onClick={() => setNotice("")}>{notice}</button>}
 
         <section className="grid">
+          {view === "conversations" && (
+            <ConversationsPanel
+              conversations={conversations}
+              customers={customers}
+              selectedBusiness={selected}
+            />
+          )}
+
           {view === "clients" && <div className="panel metrics-panel">
             <h2><BriefcaseBusiness size={20} /> Operación general</h2>
             <div className="metrics">

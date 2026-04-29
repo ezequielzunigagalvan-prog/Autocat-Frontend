@@ -883,6 +883,222 @@ form button, .quick-actions button {
 }
 .empty { color: #65736c; margin: 0; }
 
+.conversations-layout {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) 1fr;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.conversations-list-panel,
+.conversation-detail-panel {
+  min-height: 72vh;
+}
+
+.panel-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.panel-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.panel-heading p {
+  margin: 6px 0 0;
+  color: #647168;
+  font-size: 14px;
+}
+
+.conversation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.conversation-item {
+  width: 100%;
+  border: 1px solid #e2e6df;
+  background: #fff;
+  border-radius: 8px;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 42px 1fr auto;
+  gap: 10px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.conversation-item.active {
+  border-color: #294139;
+  background: #eef2ed;
+}
+
+.conversation-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  background: #15251f;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+}
+
+.conversation-meta {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.conversation-meta strong,
+.conversation-meta span,
+.conversation-meta small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conversation-meta span,
+.conversation-meta small {
+  color: #647168;
+  font-size: 13px;
+}
+
+.conversation-item em {
+  align-self: start;
+  font-size: 11px;
+  font-style: normal;
+  color: #294139;
+  background: #e8f4ee;
+  padding: 4px 8px;
+  border-radius: 999px;
+}
+
+.conversation-detail-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid #e2e6df;
+  padding-bottom: 14px;
+  margin-bottom: 14px;
+}
+
+.conversation-detail-header h2 {
+  margin: 0;
+}
+
+.conversation-detail-header span {
+  color: #647168;
+  font-size: 14px;
+}
+
+.conversation-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.conversation-status strong {
+  color: #294139;
+}
+
+.conversation-status span {
+  color: #a23b27;
+}
+
+.conversation-customer-card {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.conversation-customer-card > div {
+  border: 1px solid #e2e6df;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fbfcfa;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.conversation-customer-card span {
+  color: #526158;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.chat-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 52vh;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.chat-bubble {
+  max-width: 78%;
+  border-radius: 18px;
+  padding: 12px 14px;
+}
+
+.chat-bubble span {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  margin-bottom: 4px;
+  opacity: 0.8;
+}
+
+.chat-bubble p {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.45;
+}
+
+.chat-bubble small {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  opacity: 0.65;
+}
+
+.chat-bubble.user {
+  align-self: flex-start;
+  background: #f3f4f2;
+  color: #15251f;
+}
+
+.chat-bubble.bot {
+  align-self: flex-end;
+  background: #15251f;
+  color: #fff;
+}
+
+.empty-state {
+  min-height: 280px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  color: #647168;
+  gap: 8px;
+}
+
+.empty-state strong {
+  color: #15251f;
+}
+
 @media (max-width: 860px) {
   .shell { grid-template-columns: 1fr; }
   .sidebar { position: static; }
@@ -902,6 +1118,9 @@ form button, .quick-actions button {
   .list button { width: 100%; }
   .customer-list article { grid-template-columns: 1fr; }
   .lead-detail-head { grid-template-columns: 1fr; }
+  .conversations-layout,
+  .conversation-customer-card { grid-template-columns: 1fr; }
+  .chat-bubble { max-width: 92%; }
 }
 
 .public-page {
