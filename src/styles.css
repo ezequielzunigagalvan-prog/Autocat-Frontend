@@ -496,6 +496,10 @@ form button, .quick-actions button {
   border-color: #c66d42;
   background: #fff8f3;
 }
+.inbox-list article.followup-overdue {
+  border-color: #b91c1c;
+  box-shadow: inset 4px 0 0 #b91c1c;
+}
 .inbox-list article.selected {
   outline: 2px solid #294139;
 }
@@ -619,6 +623,89 @@ form button, .quick-actions button {
   font-size: 12px;
   font-weight: 800;
   color: #647168;
+}
+
+.followups-panel {
+  display: grid;
+  gap: 14px;
+}
+.followup-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.followup-filters button {
+  min-height: 34px;
+  border: 0;
+  border-radius: 8px;
+  background: #eef2ed;
+  color: #294139;
+  padding: 0 10px;
+  cursor: pointer;
+  font-weight: 800;
+}
+.followup-filters button.active {
+  background: #294139;
+  color: #fff;
+}
+.followup-list {
+  display: grid;
+  gap: 10px;
+}
+.followup-list article {
+  border: 1px solid #e2e6df;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fff;
+  display: grid;
+  grid-template-columns: minmax(220px, 1.4fr) repeat(3, minmax(150px, 1fr)) auto;
+  gap: 12px;
+  align-items: center;
+}
+.followup-list article.overdue {
+  border-color: #b91c1c;
+  background: #fff7f7;
+}
+.followup-main,
+.followup-meta {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.followup-main strong,
+.followup-meta strong {
+  color: #17211d;
+}
+.followup-main span,
+.followup-main small,
+.followup-meta span {
+  color: #647168;
+  font-size: 13px;
+}
+.followup-main small,
+.followup-meta strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.followup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+.followup-actions button {
+  min-height: 34px;
+  border: 0;
+  border-radius: 8px;
+  background: #294139;
+  color: #fff;
+  padding: 0 10px;
+  cursor: pointer;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 .thread-in {
   justify-self: start;
@@ -1387,6 +1474,8 @@ form button, .quick-actions button {
   .customer-list article { grid-template-columns: 1fr; }
   .lead-detail-head { grid-template-columns: 1fr; }
   .follow-up-form { grid-template-columns: 1fr; }
+  .followup-list article { grid-template-columns: 1fr; }
+  .followup-actions { justify-content: flex-start; }
   .conversations-layout,
   .conversation-customer-card,
   .quote-request-card dl { grid-template-columns: 1fr; }

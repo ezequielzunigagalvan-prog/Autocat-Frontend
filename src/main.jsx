@@ -226,6 +226,34 @@ function formatDate(value) {
   return value ? new Date(value).toLocaleString("es-MX") : "";
 }
 
+function startOfToday() {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function endOfToday() {
+  const date = new Date();
+  date.setHours(23, 59, 59, 999);
+  return date;
+}
+
+function endOfThisWeek() {
+  const date = endOfToday();
+  date.setDate(date.getDate() + (6 - date.getDay()));
+  return date;
+}
+
+function isFollowUpOverdue(customer) {
+  if (!customer?.followUpAt) return false;
+  return new Date(customer.followUpAt) < new Date();
+}
+
+function getFollowUpSummary(customer) {
+  const quote = getQuoteRequestInfo(customer);
+  return quote?.service || customer?.conversations?.[0]?.inboundText || customer?.notes || "Sin solicitud registrada";
+}
+
 
 const demoPages = {
   "/demo-barberia": {
@@ -1017,6 +1045,7 @@ function AdminApp() {
   const [reminders, setReminders] = useState([]);
   const [calendar, setCalendar] = useState(null);
   const [leadFilter, setLeadFilter] = useState("all");
+  const [followUpFilter, setFollowUpFilter] = useState("overdue");
   const [selectedLeadId, setSelectedLeadId] = useState("");
   const [leadNotes, setLeadNotes] = useState("");
   const [leadFollowUp, setLeadFollowUp] = useState({ nextAction: "", followUpAt: "", assignedTo: "" });
@@ -1451,6 +1480,26 @@ function AdminApp() {
     );
   }
 
+  async function completeFollowUp(customer) {
+    await updateLead(
+      customer,
+      { nextAction: "", followUpAt: "", needsHuman: false },
+      "Seguimiento marcado como realizado."
+    );
+  }
+
+  function openFollowUpLead(customer) {
+    setLeadFilter("all");
+    setSelectedLeadId(customer.id);
+    setLeadNotes(customer.notes || "");
+    setLeadFollowUp({
+      nextAction: customer.nextAction || "",
+      followUpAt: toDatetimeLocal(customer.followUpAt),
+      assignedTo: customer.assignedTo || ""
+    });
+    setView("dashboard");
+  }
+
   function selectLead(customer) {
     setSelectedLeadId(customer.id);
     setLeadNotes(customer.notes || "");
@@ -1549,6 +1598,28 @@ function AdminApp() {
   }
 
   const selectedLead = inbox.find((customer) => customer.id === selectedLeadId) || inbox[0];
+  const followUpLeads = useMemo(() => {
+    const todayStart = startOfToday();
+    const todayEnd = endOfToday();
+    const weekEnd = endOfThisWeek();
+
+    return customers
+      .filter((customer) => {
+        const followUpAt = customer.followUpAt ? new Date(customer.followUpAt) : null;
+
+        if (followUpFilter === "overdue") return followUpAt && followUpAt < new Date();
+        if (followUpFilter === "today") return followUpAt && followUpAt >= todayStart && followUpAt <= todayEnd;
+        if (followUpFilter === "week") return followUpAt && followUpAt >= todayStart && followUpAt <= weekEnd;
+        if (followUpFilter === "unassigned") return !customer.assignedTo;
+        return followUpAt || customer.nextAction || !customer.assignedTo;
+      })
+      .sort((a, b) => {
+        if (!a.followUpAt && !b.followUpAt) return new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0);
+        if (!a.followUpAt) return 1;
+        if (!b.followUpAt) return -1;
+        return new Date(a.followUpAt) - new Date(b.followUpAt);
+      });
+  }, [customers, followUpFilter]);
   const widgetScript = `<script src="${API_URL}/public/widget.js?v=20260502a" data-api-url="${API_URL}" data-business-id="${selected?.id || ""}"></script>`;
   const publicLinks = [
     ["Landing general", LANDING_URL],
@@ -1667,6 +1738,14 @@ function AdminApp() {
             <span>Citas</span>
           </button>
           <button
+            className={view === "followups" ? "active" : ""}
+            type="button"
+            onClick={() => setView("followups")}
+          >
+            <Clock size={18} />
+            <span>Seguimientos</span>
+          </button>
+          <button
             className={view === "settings" ? "active" : ""}
             type="button"
             onClick={() => setView("settings")}
@@ -1694,9 +1773,9 @@ function AdminApp() {
         <header className="topbar">
           <div>
             <p>{view === "clients" ? "panel principal" : selected?.niche?.replace("_", " ")}</p>
-            <h1>{view === "clients" ? "Clientes y oportunidades" : view === "settings" ? "Configuración" : view === "conversations" ? "Conversaciones" : view === "appointments" ? "Citas" : selected?.name || "AutoChat"}</h1>
+            <h1>{view === "clients" ? "Clientes y oportunidades" : view === "settings" ? "Configuración" : view === "conversations" ? "Conversaciones" : view === "appointments" ? "Citas" : view === "followups" ? "Seguimientos" : selected?.name || "AutoChat"}</h1>
           </div>
-          <span>{view === "clients" ? "Vista general de proyectos" : view === "settings" ? selected?.name : view === "conversations" ? selected?.name || "Historial de chats" : view === "appointments" ? selected?.name || "Agenda del negocio" : "Asistente web + captura de leads"}</span>
+          <span>{view === "clients" ? "Vista general de proyectos" : view === "settings" ? selected?.name : view === "conversations" ? selected?.name || "Historial de chats" : view === "appointments" ? selected?.name || "Agenda del negocio" : view === "followups" ? selected?.name || "Próximas acciones" : "Asistente web + captura de leads"}</span>
         </header>
 
         {notice && <button className="notice" onClick={() => setNotice("")}>{notice}</button>}
@@ -1721,6 +1800,68 @@ function AdminApp() {
               rescheduleAppointment={rescheduleAppointment}
             />
           )}
+
+          {view === "followups" && <div className="panel followups-panel">
+            <div className="panel-heading">
+              <div>
+                <h2><Clock size={20} /> Seguimientos</h2>
+                <p>Próximas acciones comerciales para {selected?.name || "este negocio"}.</p>
+              </div>
+            </div>
+            <div className="followup-filters">
+              {[
+                ["overdue", "Vencidos"],
+                ["today", "Hoy"],
+                ["week", "Esta semana"],
+                ["unassigned", "Sin responsable"],
+                ["all", "Todos"]
+              ].map(([value, label]) => (
+                <button
+                  className={followUpFilter === value ? "active" : ""}
+                  key={value}
+                  type="button"
+                  onClick={() => setFollowUpFilter(value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {!followUpLeads.length && (
+              <div className="empty-state">
+                <Clock size={30} />
+                <strong>No hay seguimientos en este filtro</strong>
+                <span>Programa una próxima acción desde la bandeja de leads.</span>
+              </div>
+            )}
+            <div className="followup-list">
+              {followUpLeads.map((customer) => (
+                <article key={customer.id} className={isFollowUpOverdue(customer) ? "overdue" : ""}>
+                  <div className="followup-main">
+                    <strong>{customer.name || customer.phone}</strong>
+                    <span>{customer.phone}{customer.email ? ` · ${customer.email}` : ""}</span>
+                    <small>{getFollowUpSummary(customer)}</small>
+                  </div>
+                  <div className="followup-meta">
+                    <span>Próxima acción</span>
+                    <strong>{customer.nextAction || "Sin acción definida"}</strong>
+                  </div>
+                  <div className="followup-meta">
+                    <span>Responsable</span>
+                    <strong>{customer.assignedTo || "Sin responsable"}</strong>
+                  </div>
+                  <div className="followup-meta">
+                    <span>Fecha límite</span>
+                    <strong>{customer.followUpAt ? formatDate(customer.followUpAt) : "Sin fecha"}</strong>
+                  </div>
+                  <div className="followup-actions">
+                    <button type="button" onClick={() => completeFollowUp(customer)}>Realizado</button>
+                    <button type="button" onClick={() => openFollowUpLead(customer)}>Programar siguiente</button>
+                    <button type="button" onClick={() => copyText(buildLeadSummary(customer, "whatsapp"), "Resumen para WhatsApp")}><Copy size={16} /> Copiar</button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>}
 
           {view === "clients" && <div className="panel metrics-panel">
             <h2><BriefcaseBusiness size={20} /> Operación general</h2>
@@ -2179,7 +2320,7 @@ function AdminApp() {
             </div>
             <div className="inbox-list">
               {inbox.map((customer) => (
-                <article key={customer.id} className={`${customer.needsHuman ? "needs-human" : ""} ${selectedLead?.id === customer.id ? "selected" : ""}`}>
+                <article key={customer.id} className={`${customer.needsHuman ? "needs-human" : ""} ${selectedLead?.id === customer.id ? "selected" : ""} ${isFollowUpOverdue(customer) ? "followup-overdue" : ""}`}>
                   <div>
                     <strong>{customer.name}</strong>
                     <span>{customer.phone}{customer.email ? `, ${customer.email}` : ""}</span>
