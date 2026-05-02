@@ -517,6 +517,7 @@ form button, .quick-actions button {
 .lead-badge.nuevo { background: #fff3dc; color: #7b531f; }
 .lead-badge.contactado { background: #e8f4ee; color: #276646; }
 .lead-badge.cita_agendada { background: #e6eef7; color: #2f567c; }
+.lead-badge.ganado { background: #dcfce7; color: #166534; }
 .lead-badge.perdido { background: #f5e7e2; color: #8a3f2c; }
 .lead-detail {
   border: 1px solid #dfe5dc;
@@ -536,6 +537,57 @@ form button, .quick-actions button {
   display: block;
   color: #647168;
   margin-top: 3px;
+}
+.commercial-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.commercial-actions button {
+  min-height: 36px;
+  border: 0;
+  border-radius: 8px;
+  background: #294139;
+  color: #fff;
+  padding: 0 10px;
+  cursor: pointer;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.commercial-actions button.danger {
+  background: #f5e7e2;
+  color: #8a3f2c;
+}
+.follow-up-form {
+  display: grid;
+  grid-template-columns: 1fr 220px 180px auto;
+  gap: 8px;
+  align-items: end;
+}
+.follow-up-form label {
+  display: grid;
+  gap: 5px;
+}
+.follow-up-form label span {
+  color: #526158;
+  font-size: 12px;
+  font-weight: 800;
+}
+.follow-up-form input {
+  min-height: 40px;
+  border: 1px solid #ccd5ce;
+  border-radius: 8px;
+  padding: 0 10px;
+}
+.follow-up-form button {
+  min-height: 40px;
+  background: #294139;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 .lead-notes-form {
   display: grid;
@@ -1334,6 +1386,7 @@ form button, .quick-actions button {
   .list button { width: 100%; }
   .customer-list article { grid-template-columns: 1fr; }
   .lead-detail-head { grid-template-columns: 1fr; }
+  .follow-up-form { grid-template-columns: 1fr; }
   .conversations-layout,
   .conversation-customer-card,
   .quote-request-card dl { grid-template-columns: 1fr; }

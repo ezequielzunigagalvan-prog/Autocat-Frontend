@@ -50,6 +50,7 @@ const LEAD_STATUSES = [
   ["nuevo", "Nuevos"],
   ["contactado", "Contactados"],
   ["cita_agendada", "Cita agendada"],
+  ["ganado", "Ganados"],
   ["perdido", "Perdidos"]
 ];
 const SEGMENT_OPTIONS = [
@@ -588,6 +589,33 @@ function getQuoteRequestInfo(customer) {
   return hasQuote ? quote : null;
 }
 
+function buildLeadSummary(customer, format = "whatsapp") {
+  if (!customer) return "";
+  const quote = getQuoteRequestInfo(customer);
+  const lines = [
+    format === "email" ? "Resumen comercial del lead" : "Resumen del lead",
+    `Nombre: ${customer.name || "Sin nombre"}`,
+    `Teléfono: ${customer.phone || "Sin teléfono"}`,
+    customer.email ? `Correo: ${customer.email}` : "",
+    `Estado: ${LEAD_STATUSES.find(([value]) => value === (customer.leadStatus || "nuevo"))?.[1] || customer.leadStatus || "Nuevo"}`,
+    customer.needsHuman ? "Atención: requiere seguimiento humano" : "Atención: ya marcado como atendido",
+    quote ? "" : "",
+    quote ? "Solicitud de cotización:" : "",
+    quote ? `Servicio: ${quote.service || "No especificado"}` : "",
+    quote ? `Detalles: ${quote.details || "No especificados"}` : "",
+    quote ? `Ubicación: ${quote.location || "No especificada"}` : "",
+    quote ? `Urgencia: ${quote.urgency || "No especificada"}` : "",
+    customer.nextAction ? "" : "",
+    customer.nextAction ? `Próxima acción: ${customer.nextAction}` : "",
+    customer.followUpAt ? `Fecha de seguimiento: ${formatDate(customer.followUpAt)}` : "",
+    customer.assignedTo ? `Responsable: ${customer.assignedTo}` : "",
+    customer.notes ? "" : "",
+    customer.notes ? `Notas: ${customer.notes}` : ""
+  ].filter(Boolean);
+
+  return lines.join(format === "email" ? "\n" : "\n");
+}
+
 function ConversationsPanel({ conversations = [], customers = [], selectedBusiness }) {
   const [selectedFrom, setSelectedFrom] = useState("");
 
@@ -991,6 +1019,7 @@ function AdminApp() {
   const [leadFilter, setLeadFilter] = useState("all");
   const [selectedLeadId, setSelectedLeadId] = useState("");
   const [leadNotes, setLeadNotes] = useState("");
+  const [leadFollowUp, setLeadFollowUp] = useState({ nextAction: "", followUpAt: "", assignedTo: "" });
   const [message, setMessage] = useState("Quiero agendar una cita");
   const [sender, setSender] = useState("+525550000001");
   const [notice, setNotice] = useState("");
@@ -1408,9 +1437,28 @@ function AdminApp() {
     await loadData(selected.id);
   }
 
+  async function saveFollowUp(event) {
+    event.preventDefault();
+    if (!selectedLead) return;
+    await updateLead(
+      selectedLead,
+      {
+        nextAction: leadFollowUp.nextAction,
+        followUpAt: leadFollowUp.followUpAt ? new Date(leadFollowUp.followUpAt).toISOString() : "",
+        assignedTo: leadFollowUp.assignedTo
+      },
+      "Seguimiento guardado."
+    );
+  }
+
   function selectLead(customer) {
     setSelectedLeadId(customer.id);
     setLeadNotes(customer.notes || "");
+    setLeadFollowUp({
+      nextAction: customer.nextAction || "",
+      followUpAt: toDatetimeLocal(customer.followUpAt),
+      assignedTo: customer.assignedTo || ""
+    });
   }
 
   async function copyText(value, label = "Texto") {
@@ -1510,8 +1558,15 @@ function AdminApp() {
     ["Panel admin", ADMIN_URL]
   ];
   useEffect(() => {
-    if (selectedLead) setLeadNotes(selectedLead.notes || "");
-  }, [selectedLead?.id, selectedLead?.notes]);
+    if (selectedLead) {
+      setLeadNotes(selectedLead.notes || "");
+      setLeadFollowUp({
+        nextAction: selectedLead.nextAction || "",
+        followUpAt: toDatetimeLocal(selectedLead.followUpAt),
+        assignedTo: selectedLead.assignedTo || ""
+      });
+    }
+  }, [selectedLead?.id, selectedLead?.notes, selectedLead?.nextAction, selectedLead?.followUpAt, selectedLead?.assignedTo]);
   const weekDays = calendar?.weekStart
     ? Array.from({ length: 7 }, (_, index) => {
         const date = new Date(calendar.weekStart);
@@ -2130,11 +2185,15 @@ function AdminApp() {
                     <span>{customer.phone}{customer.email ? `, ${customer.email}` : ""}</span>
                     <span className={`lead-badge ${customer.leadStatus || "nuevo"}`}>{LEAD_STATUSES.find(([value]) => value === (customer.leadStatus || "nuevo"))?.[1] || "Nuevo"}</span>
                     {getQuoteRequestInfo(customer) && <small className="quote-mini-label">Lead: cotización completa</small>}
+                    {customer.nextAction && <small>Próxima acción: {customer.nextAction}</small>}
+                    {customer.followUpAt && <small>Seguimiento: {formatDate(customer.followUpAt)}</small>}
                     <small>{customer.conversations?.[0]?.inboundText || customer.conversations?.[0]?.outboundText || "Sin mensajes"}</small>
                   </div>
                   <div className="mini-actions">
                     <button type="button" onClick={() => selectLead(customer)}>Ver</button>
-                    <button type="button" onClick={() => updateLead(customer, { leadStatus: "contactado", needsHuman: false }, "Lead marcado como contactado.")}>Marcar contactado</button>
+                    <button type="button" onClick={() => updateLead(customer, { leadStatus: "contactado", needsHuman: false }, "Lead marcado como atendido.")}>Atendido</button>
+                    <button type="button" onClick={() => updateLead(customer, { leadStatus: "ganado", needsHuman: false }, "Lead marcado como ganado.")}>Ganado</button>
+                    <button type="button" onClick={() => updateLead(customer, { leadStatus: "perdido", needsHuman: false }, "Lead marcado como perdido.")}>Perdido</button>
                     <button type="button" onClick={() => toggleCustomerBot(customer)}>{customer.botPaused ? "Activar bot" : "Pausar bot"}</button>
                     <button type="button" onClick={() => setManualReply({ customerId: customer.id, text: "" })}>Responder</button>
                   </div>
@@ -2158,6 +2217,13 @@ function AdminApp() {
                     ))}
                   </select>
                 </div>
+                <div className="commercial-actions">
+                  <button type="button" onClick={() => updateLead(selectedLead, { leadStatus: "contactado", needsHuman: false }, "Lead marcado como atendido.")}>Marcar atendido</button>
+                  <button type="button" onClick={() => updateLead(selectedLead, { leadStatus: "ganado", needsHuman: false }, "Lead marcado como ganado.")}>Marcar ganado</button>
+                  <button type="button" className="danger" onClick={() => updateLead(selectedLead, { leadStatus: "perdido", needsHuman: false }, "Lead marcado como perdido.")}>Marcar perdido</button>
+                  <button type="button" onClick={() => copyText(buildLeadSummary(selectedLead, "whatsapp"), "Resumen para WhatsApp")}><Copy size={16} /> WhatsApp</button>
+                  <button type="button" onClick={() => copyText(buildLeadSummary(selectedLead, "email"), "Resumen para correo")}><Copy size={16} /> Correo</button>
+                </div>
                 {(() => {
                   const quote = getQuoteRequestInfo(selectedLead);
                   return quote ? (
@@ -2175,6 +2241,33 @@ function AdminApp() {
                     </div>
                   ) : null;
                 })()}
+                <form className="follow-up-form" onSubmit={saveFollowUp}>
+                  <label>
+                    <span>Próxima acción</span>
+                    <input
+                      value={leadFollowUp.nextAction}
+                      onChange={(event) => setLeadFollowUp((current) => ({ ...current, nextAction: event.target.value }))}
+                      placeholder="Llamar, enviar propuesta, validar alcance..."
+                    />
+                  </label>
+                  <label>
+                    <span>Fecha de seguimiento</span>
+                    <input
+                      type="datetime-local"
+                      value={leadFollowUp.followUpAt}
+                      onChange={(event) => setLeadFollowUp((current) => ({ ...current, followUpAt: event.target.value }))}
+                    />
+                  </label>
+                  <label>
+                    <span>Responsable</span>
+                    <input
+                      value={leadFollowUp.assignedTo}
+                      onChange={(event) => setLeadFollowUp((current) => ({ ...current, assignedTo: event.target.value }))}
+                      placeholder="Nombre del responsable"
+                    />
+                  </label>
+                  <button type="submit"><Save size={18} /> Guardar seguimiento</button>
+                </form>
                 <form className="lead-notes-form" onSubmit={(event) => {
                   event.preventDefault();
                   updateLead(selectedLead, { notes: leadNotes }, "Notas guardadas.");
