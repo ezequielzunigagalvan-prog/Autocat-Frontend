@@ -1657,7 +1657,7 @@ form button, .quick-actions button {
   box-shadow: 0 22px 60px rgba(17, 29, 24, 0.24);
   overflow: hidden;
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
 }
 .react-widget-panel header {
   min-height: 86px;
@@ -1721,6 +1721,8 @@ form button, .quick-actions button {
   align-content: start;
   border-top: 1px solid #e2e6df;
   background: #fff;
+  max-height: 250px;
+  overflow: auto;
 }
 .react-widget-lead strong {
   color: #18211f;
@@ -1754,7 +1756,8 @@ form button, .quick-actions button {
   min-height: 16px;
 }
 .react-widget-messages {
-  height: 424px;
+  height: auto;
+  min-height: 0;
   overflow: auto;
   padding: 18px 14px;
   display: grid;
@@ -1844,5 +1847,12 @@ form button, .quick-actions button {
     border-radius: 18px;
   }
   .react-widget-lead { height: calc(100vh - 110px); }
-  .react-widget-messages { height: calc(100vh - 190px); }
+  .react-widget-contact {
+    height: auto;
+    max-height: 280px;
+  }
+  .react-widget-messages {
+    height: auto;
+    min-height: 0;
+  }
 }
