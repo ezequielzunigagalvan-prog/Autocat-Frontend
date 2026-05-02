@@ -19,6 +19,7 @@ import {
   Copy,
   Save,
   Plus,
+  ShieldCheck,
   XCircle
 } from "lucide-react";
 import "./styles.css";
@@ -1029,11 +1030,13 @@ function App() {
 
 function AdminApp() {
   const [token, setToken] = useState(() => localStorage.getItem("autochat_token") || "");
+  const [currentUser, setCurrentUser] = useState(null);
   const [view, setView] = useState("clients");
-  const [loginForm, setLoginForm] = useState({ email: "admin@autochat.test", password: "123456" });
+  const [loginForm, setLoginForm] = useState({ email: "", password: "" });
   const [businesses, setBusinesses] = useState([]);
   const [selectedId, setSelectedId] = useState("");
   const [mainDashboard, setMainDashboard] = useState(null);
+  const [internalOverview, setInternalOverview] = useState(null);
   const [conversations, setConversations] = useState([]);
   const [appointments, setAppointments] = useState([]);
   const [staff, setStaff] = useState([]);
@@ -1112,6 +1115,7 @@ function AdminApp() {
       return;
     }
     localStorage.setItem("autochat_token", body.token);
+    setCurrentUser(body.user);
     setToken(body.token);
     setNotice("");
   }
@@ -1119,12 +1123,19 @@ function AdminApp() {
   function logout() {
     localStorage.removeItem("autochat_token");
     setToken("");
+    setCurrentUser(null);
+    setInternalOverview(null);
     setBusinesses([]);
   }
 
   async function loadData(businessId = selected?.id) {
     if (!token) return;
-    const [mainDashboardRes, businessRes, conversationsRes, appointmentsRes, staffRes, blocksRes, customersRes, dashboardRes, inboxRes, templatesRes, remindersRes, calendarRes] = await Promise.all([
+    const profileRes = await apiFetch("/api/auth/me");
+    if (!profileRes.ok) return;
+    const profile = await profileRes.json();
+    setCurrentUser(profile.user);
+
+    const [mainDashboardRes, businessRes, conversationsRes, appointmentsRes, staffRes, blocksRes, customersRes, dashboardRes, inboxRes, templatesRes, remindersRes, calendarRes, internalRes] = await Promise.all([
       apiFetch(`/api/dashboard`),
       apiFetch(`/api/businesses`),
       apiFetch(`/api/conversations${businessId ? `?businessId=${businessId}` : ""}`),
@@ -1136,7 +1147,8 @@ function AdminApp() {
       businessId ? apiFetch(`/api/inbox/${businessId}${leadFilter !== "all" ? `?status=${leadFilter}` : ""}`) : Promise.resolve({ json: async () => [] }),
       businessId ? apiFetch(`/api/templates/${businessId}`) : Promise.resolve({ json: async () => [] }),
       businessId ? apiFetch(`/api/reminders/${businessId}`) : Promise.resolve({ json: async () => [] }),
-      businessId ? apiFetch(`/api/calendar/${businessId}`) : Promise.resolve({ json: async () => null })
+      businessId ? apiFetch(`/api/calendar/${businessId}`) : Promise.resolve({ json: async () => null }),
+      profile.user?.isInternalAdmin ? apiFetch("/api/internal/overview") : Promise.resolve({ json: async () => null })
     ]);
 
     setMainDashboard(await mainDashboardRes.json());
@@ -1153,6 +1165,7 @@ function AdminApp() {
     setTemplates(await templatesRes.json());
     setReminders(await remindersRes.json());
     setCalendar(await calendarRes.json());
+    setInternalOverview(await internalRes.json());
   }
 
   useEffect(() => {
@@ -1691,7 +1704,7 @@ function AdminApp() {
             aria-label="Contraseña"
           />
           <button type="submit">Entrar</button>
-          <p>Demo: admin@autochat.test / 123456</p>
+          <p>Acceso privado para usuarios autorizados.</p>
           <a className="public-login-link" href={LANDING_URL}>Volver a la landing</a>
           {notice && <span>{notice}</span>}
         </form>
@@ -1753,6 +1766,16 @@ function AdminApp() {
             <Settings size={18} />
             <span>Configuración</span>
           </button>
+          {currentUser?.isInternalAdmin && (
+            <button
+              className={view === "internal" ? "active" : ""}
+              type="button"
+              onClick={() => setView("internal")}
+            >
+              <ShieldCheck size={18} />
+              <span>Interno</span>
+            </button>
+          )}
         </div>
         <p className="sidebar-label">Negocios</p>
         <nav>
@@ -1773,9 +1796,9 @@ function AdminApp() {
         <header className="topbar">
           <div>
             <p>{view === "clients" ? "panel principal" : selected?.niche?.replace("_", " ")}</p>
-            <h1>{view === "clients" ? "Clientes y oportunidades" : view === "settings" ? "Configuración" : view === "conversations" ? "Conversaciones" : view === "appointments" ? "Citas" : view === "followups" ? "Seguimientos" : selected?.name || "AutoChat"}</h1>
+            <h1>{view === "clients" ? "Clientes y oportunidades" : view === "settings" ? "Configuración" : view === "conversations" ? "Conversaciones" : view === "appointments" ? "Citas" : view === "followups" ? "Seguimientos" : view === "internal" ? "Control interno" : selected?.name || "AutoChat"}</h1>
           </div>
-          <span>{view === "clients" ? "Vista general de proyectos" : view === "settings" ? selected?.name : view === "conversations" ? selected?.name || "Historial de chats" : view === "appointments" ? selected?.name || "Agenda del negocio" : view === "followups" ? selected?.name || "Próximas acciones" : "Asistente web + captura de leads"}</span>
+          <span>{view === "clients" ? "Vista general de proyectos" : view === "settings" ? selected?.name : view === "conversations" ? selected?.name || "Historial de chats" : view === "appointments" ? selected?.name || "Agenda del negocio" : view === "followups" ? selected?.name || "Próximas acciones" : view === "internal" ? "Administración privada de AutoChat" : "Asistente web + captura de leads"}</span>
         </header>
 
         {notice && <button className="notice" onClick={() => setNotice("")}>{notice}</button>}
@@ -1860,6 +1883,57 @@ function AdminApp() {
                   </div>
                 </article>
               ))}
+            </div>
+          </div>}
+
+          {view === "internal" && currentUser?.isInternalAdmin && <div className="panel internal-panel">
+            <div className="panel-heading">
+              <div>
+                <h2><ShieldCheck size={20} /> Control interno</h2>
+                <p>Vista privada para operar AutoChat completo sin mezclarlo con el panel del cliente.</p>
+              </div>
+            </div>
+            <div className="security-note">
+              <strong>Acceso protegido</strong>
+              <span>Esta sección solo aparece para usuarios internos. El backend valida el rol en cada petición.</span>
+            </div>
+            <div className="metrics">
+              <article><strong>{internalOverview?.totals?.businesses ?? 0}</strong><span>Negocios</span></article>
+              <article><strong>{internalOverview?.totals?.users ?? 0}</strong><span>Usuarios</span></article>
+              <article><strong>{internalOverview?.totals?.activeSessions ?? 0}</strong><span>Sesiones activas</span></article>
+              <article><strong>{internalOverview?.totals?.totalLeads ?? 0}</strong><span>Leads totales</span></article>
+              <article><strong>{internalOverview?.totals?.needsHuman ?? 0}</strong><span>Requieren atención</span></article>
+              <article><strong>{internalOverview?.totals?.overdueFollowUps ?? 0}</strong><span>Seguimientos vencidos</span></article>
+              <article><strong>{internalOverview?.totals?.wonLeads ?? 0}</strong><span>Ganados</span></article>
+              <article><strong>{internalOverview?.totals?.lostLeads ?? 0}</strong><span>Perdidos</span></article>
+            </div>
+            <div className="internal-grid">
+              <section>
+                <h3>Negocios recientes</h3>
+                <div className="internal-list">
+                  {(internalOverview?.recentBusinesses || []).map((business) => (
+                    <article key={business.id}>
+                      <strong>{business.name}</strong>
+                      <span>{business.niche} · {business.automationType}</span>
+                      <small>{business.customers} leads · {business.conversations} mensajes · {business.appointments} citas</small>
+                      <small>{business.owners?.map((owner) => `${owner.name} (${owner.email})`).join(", ") || "Sin dueño visible"}</small>
+                    </article>
+                  ))}
+                </div>
+              </section>
+              <section>
+                <h3>Leads que requieren revisión</h3>
+                <div className="internal-list">
+                  {(internalOverview?.recentLeads || []).map((lead) => (
+                    <article key={lead.id} className={lead.needsHuman ? "needs-human" : ""}>
+                      <strong>{lead.name || lead.phone}</strong>
+                      <span>{lead.business?.name} · {lead.leadStatus}</span>
+                      <small>{lead.conversations?.[0]?.inboundText || lead.notes || "Sin último mensaje"}</small>
+                      <small>{lead.followUpAt ? `Seguimiento: ${formatDate(lead.followUpAt)}` : "Sin seguimiento"}</small>
+                    </article>
+                  ))}
+                </div>
+              </section>
             </div>
           </div>}
 
