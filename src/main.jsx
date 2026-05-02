@@ -559,6 +559,35 @@ function PublicFooter({ label = "AutoChat Web" }) {
   return <footer className="public-footer"><div className="public-inner"><strong>{label}</strong><span>Automatización web personalizada para negocios.</span></div></footer>;
 }
 
+function parseQuoteFromNotes(notes = "") {
+  if (!notes.includes("Solicitud de cotizaci")) return null;
+
+  const getValue = (label) => {
+    const line = notes.split("\n").find((item) => item.toLowerCase().startsWith(label.toLowerCase() + ":"));
+    return line ? line.slice(label.length + 1).trim() : "";
+  };
+
+  return {
+    service: getValue("Servicio"),
+    details: getValue("Detalles"),
+    location: getValue("Ubicación"),
+    urgency: getValue("Urgencia")
+  };
+}
+
+function getQuoteRequestInfo(customer) {
+  if (!customer) return null;
+  const fromNotes = parseQuoteFromNotes(customer.notes || "") || {};
+  const quote = {
+    service: customer.quoteService || fromNotes.service || "",
+    details: customer.quoteDetails || fromNotes.details || "",
+    location: customer.quoteLocation || fromNotes.location || "",
+    urgency: customer.quoteUrgency || fromNotes.urgency || ""
+  };
+  const hasQuote = customer.lastIntent === "quote_complete" || Object.values(quote).some(Boolean);
+  return hasQuote ? quote : null;
+}
+
 function ConversationsPanel({ conversations = [], customers = [], selectedBusiness }) {
   const [selectedFrom, setSelectedFrom] = useState("");
 
@@ -615,6 +644,8 @@ function ConversationsPanel({ conversations = [], customers = [], selectedBusine
     return labels[status] || status || "Sin estado";
   }
 
+  const selectedQuote = getQuoteRequestInfo(selectedThread?.customer);
+
   return (
     <div className="conversations-layout">
       <section className="panel conversations-list-panel">
@@ -653,6 +684,7 @@ function ConversationsPanel({ conversations = [], customers = [], selectedBusine
                   <strong>{thread.customer?.name || thread.from}</strong>
                   <span>{last?.inboundText || last?.outboundText || "Sin mensaje"}</span>
                   <small>{last?.createdAt ? formatDate(last.createdAt) : ""}</small>
+                  {getQuoteRequestInfo(thread.customer) && <small className="quote-mini-label">Cotización completa</small>}
                 </div>
 
                 <em>{getLeadStatusLabel(thread.customer?.leadStatus)}</em>
@@ -696,6 +728,33 @@ function ConversationsPanel({ conversations = [], customers = [], selectedBusine
                 <span>{selectedThread.customer?.notes || "Sin notas registradas"}</span>
               </div>
             </div>
+
+            {selectedQuote && (
+              <div className="quote-request-card">
+                <div>
+                  <span>Solicitud de cotización</span>
+                  <strong>{selectedQuote.service || "Servicio no especificado"}</strong>
+                </div>
+                <dl>
+                  <div>
+                    <dt>Detalles técnicos</dt>
+                    <dd>{selectedQuote.details || "Sin detalles"}</dd>
+                  </div>
+                  <div>
+                    <dt>Ubicación</dt>
+                    <dd>{selectedQuote.location || "Sin ubicación"}</dd>
+                  </div>
+                  <div>
+                    <dt>Urgencia</dt>
+                    <dd>{selectedQuote.urgency || "Sin urgencia"}</dd>
+                  </div>
+                  <div>
+                    <dt>Estado</dt>
+                    <dd>{selectedThread.customer?.needsHuman ? "Requiere atención humana" : "En seguimiento"}</dd>
+                  </div>
+                </dl>
+              </div>
+            )}
 
             <div className="chat-thread">
               {selectedThread.messages.map((message) => (
@@ -2070,6 +2129,7 @@ function AdminApp() {
                     <strong>{customer.name}</strong>
                     <span>{customer.phone}{customer.email ? `, ${customer.email}` : ""}</span>
                     <span className={`lead-badge ${customer.leadStatus || "nuevo"}`}>{LEAD_STATUSES.find(([value]) => value === (customer.leadStatus || "nuevo"))?.[1] || "Nuevo"}</span>
+                    {getQuoteRequestInfo(customer) && <small className="quote-mini-label">Lead: cotización completa</small>}
                     <small>{customer.conversations?.[0]?.inboundText || customer.conversations?.[0]?.outboundText || "Sin mensajes"}</small>
                   </div>
                   <div className="mini-actions">
@@ -2098,6 +2158,23 @@ function AdminApp() {
                     ))}
                   </select>
                 </div>
+                {(() => {
+                  const quote = getQuoteRequestInfo(selectedLead);
+                  return quote ? (
+                    <div className="quote-request-card">
+                      <div>
+                        <span>Solicitud de cotización</span>
+                        <strong>{quote.service || "Servicio no especificado"}</strong>
+                      </div>
+                      <dl>
+                        <div><dt>Detalles técnicos</dt><dd>{quote.details || "Sin detalles"}</dd></div>
+                        <div><dt>Ubicación</dt><dd>{quote.location || "Sin ubicación"}</dd></div>
+                        <div><dt>Urgencia</dt><dd>{quote.urgency || "Sin urgencia"}</dd></div>
+                        <div><dt>Estado</dt><dd>{selectedLead.needsHuman ? "Requiere atención humana" : "En seguimiento"}</dd></div>
+                      </dl>
+                    </div>
+                  ) : null;
+                })()}
                 <form className="lead-notes-form" onSubmit={(event) => {
                   event.preventDefault();
                   updateLead(selectedLead, { notes: leadNotes }, "Notas guardadas.");

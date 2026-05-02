@@ -972,6 +972,16 @@ form button, .quick-actions button {
   font-size: 13px;
 }
 
+.conversation-meta .quote-mini-label,
+.inbox-list .quote-mini-label {
+  width: fit-content;
+  color: #8a4a2d;
+  background: #fff1e8;
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-weight: 800;
+}
+
 .conversation-item em {
   align-self: start;
   font-size: 11px;
@@ -1036,6 +1046,60 @@ form button, .quick-actions button {
   color: #526158;
   font-size: 13px;
   line-height: 1.4;
+}
+
+.quote-request-card {
+  border: 1px solid #d7e2d8;
+  border-radius: 8px;
+  background: #f3faf4;
+  padding: 14px;
+  margin-bottom: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.quote-request-card > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.quote-request-card > div:first-child span {
+  color: #1f5c50;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.quote-request-card > div:first-child strong {
+  color: #17211d;
+  font-size: 18px;
+}
+
+.quote-request-card dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.quote-request-card dl div {
+  border: 1px solid #e1e9e2;
+  border-radius: 8px;
+  background: #fff;
+  padding: 10px;
+}
+
+.quote-request-card dt {
+  color: #647168;
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.quote-request-card dd {
+  margin: 0;
+  color: #17211d;
+  line-height: 1.35;
 }
 
 .chat-thread {
@@ -1271,7 +1335,8 @@ form button, .quick-actions button {
   .customer-list article { grid-template-columns: 1fr; }
   .lead-detail-head { grid-template-columns: 1fr; }
   .conversations-layout,
-  .conversation-customer-card { grid-template-columns: 1fr; }
+  .conversation-customer-card,
+  .quote-request-card dl { grid-template-columns: 1fr; }
   .chat-bubble { max-width: 92%; }
   .appointments-layout,
   .appointment-card { grid-template-columns: 1fr; }
