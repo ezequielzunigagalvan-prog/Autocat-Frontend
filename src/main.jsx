@@ -315,28 +315,35 @@ const widgetDefaults = {
 
 function PublicWidget({ businessId }) {
   const defaults = widgetDefaults[businessId] || widgetDefaults.demo_proyectos;
+  const initialGreeting = /en qu[eé] puedo ayudarte/i.test(defaults.hello)
+    ? defaults.hello
+    : `${defaults.hello}\n\n¿En qué puedo ayudarte hoy?`;
   const [isOpen, setIsOpen] = useState(() => window.location.hash === "#chat");
-  const [leadReady, setLeadReady] = useState(false);
-  const [from, setFrom] = useState("");
+  const [from, setFrom] = useState(() => `web-${businessId || "default"}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
   const [leadError, setLeadError] = useState("");
   const [leadForm, setLeadForm] = useState({ name: defaults.name, phone: defaults.phone, email: defaults.email });
   const [messageText, setMessageText] = useState(defaults.prompt);
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState([{ who: "bot", text: initialGreeting }]);
+  const [contactNeeded, setContactNeeded] = useState(false);
+  const [contactCaptured, setContactCaptured] = useState(false);
 
   useEffect(() => {
     setLeadForm({ name: defaults.name, phone: defaults.phone, email: defaults.email });
     setMessageText(defaults.prompt);
-    setMessages([]);
-    setLeadReady(false);
-    setFrom("");
+    setMessages([{ who: "bot", text: initialGreeting }]);
+    setFrom(`web-${businessId || "default"}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+    setContactNeeded(false);
+    setContactCaptured(false);
+    setLeadError("");
   }, [businessId]);
 
   function resetPublicWidget() {
     setLeadForm({ name: defaults.name, phone: defaults.phone, email: defaults.email });
     setMessageText(defaults.prompt);
-    setMessages([]);
-    setLeadReady(false);
-    setFrom("");
+    setMessages([{ who: "bot", text: initialGreeting }]);
+    setFrom(`web-${businessId || "default"}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+    setContactNeeded(false);
+    setContactCaptured(false);
     setLeadError("");
   }
 
@@ -353,7 +360,19 @@ function PublicWidget({ businessId }) {
     return () => window.removeEventListener("autochat:open", openHandler);
   }, [defaults]);
 
-  async function startChat(event) {
+  function shouldAskContact(conversation) {
+    if (contactCaptured) return false;
+    const status = conversation?.status || "";
+    const outbound = conversation?.outboundText || "";
+    return (
+      ["needs_human", "appointment_confirmed", "appointment_rescheduled", "appointment_cancelled"].includes(status) ||
+      outbound.includes("dejé registrada tu solicitud") ||
+      outbound.includes("revisará la información") ||
+      outbound.includes("pasar con una persona")
+    );
+  }
+
+  async function submitContact(event) {
     event.preventDefault();
     setLeadError("");
     try {
@@ -365,20 +384,19 @@ function PublicWidget({ businessId }) {
           name: leadForm.name,
           phone: leadForm.phone,
           email: leadForm.email,
+          previousFrom: from,
           source: "widget_web",
-          notes: "Lead capturado desde widget web"
+          notes: "Lead capturado al final del chat"
         })
       });
       const body = await response.json();
-      if (!response.ok) throw new Error(body.error || "No se pudo iniciar el chat.");
+      if (!response.ok) throw new Error(body.error || "No se pudieron guardar los datos.");
       setFrom(body.from);
-      setLeadReady(true);
-      setMessages([
-        { who: "bot", text: defaults.hello },
-        { who: "bot", text: "¿En qué puedo ayudarte hoy?" }
-      ]);
+      setContactNeeded(false);
+      setContactCaptured(true);
+      setMessages((current) => [...current, { who: "bot", text: "Gracias. Ya guardé tus datos y el equipo podrá dar seguimiento a tu solicitud." }]);
     } catch (error) {
-      setLeadError(error.message || "No se pudo iniciar el chat.");
+      setLeadError(error.message || "No se pudieron guardar los datos.");
     }
   }
 
@@ -395,6 +413,7 @@ function PublicWidget({ businessId }) {
       });
       const body = await response.json();
       setMessages((current) => [...current, { who: "bot", text: body.outboundText || "No pude responder en este momento." }]);
+      if (shouldAskContact(body)) setContactNeeded(true);
     } catch {
       setMessages((current) => [...current, { who: "bot", text: "No pude conectar con el asistente. Intenta de nuevo en un momento." }]);
     }
@@ -441,37 +460,35 @@ function PublicWidget({ businessId }) {
           </div>
           <button type="button" onClick={closePublicWidget} aria-label="Cerrar chat">×</button>
         </header>
-        {!leadReady ? (
-          <form className="react-widget-lead" onSubmit={startChat}>
-            <strong>Antes de iniciar</strong>
-            <span>{defaults.intro}</span>
+        <div className="react-widget-messages">
+          {messages.map((item, index) => (
+            <React.Fragment key={index}>
+              <p className={item.who === "me" ? "me" : "bot"}><span>{item.who === "me" ? "Tú" : defaults.title}</span>{item.text}</p>
+              {item.who !== "me" && widgetQuickReplies(item.text).length > 0 && (
+                <div className="react-widget-options">
+                  {widgetQuickReplies(item.text).map(([label, value]) => (
+                    <button key={`${index}-${label}`} type="button" onClick={() => sendWidgetQuickReply(value)}>{label}</button>
+                  ))}
+                </div>
+              )}
+            </React.Fragment>
+          ))}
+        </div>
+        {contactNeeded ? (
+          <form className="react-widget-lead react-widget-contact" onSubmit={submitContact}>
+            <strong>Datos de contacto</strong>
+            <span>Para que el equipo pueda darte seguimiento, déjame tus datos.</span>
             <input value={leadForm.name} onChange={(event) => setLeadForm((current) => ({ ...current, name: event.target.value }))} placeholder="Nombre" required />
             <input value={leadForm.phone} onChange={(event) => setLeadForm((current) => ({ ...current, phone: event.target.value }))} placeholder="Teléfono / WhatsApp" required />
             <input value={leadForm.email} onChange={(event) => setLeadForm((current) => ({ ...current, email: event.target.value }))} placeholder="Correo opcional" type="email" />
-            <button type="submit">Iniciar chat</button>
+            <button type="submit">Enviar datos</button>
             {leadError && <small>{leadError}</small>}
           </form>
         ) : (
-          <>
-            <div className="react-widget-messages">
-              {messages.map((item, index) => (
-                <React.Fragment key={index}>
-                  <p className={item.who === "me" ? "me" : "bot"}><span>{item.who === "me" ? "Tú" : defaults.title}</span>{item.text}</p>
-                  {item.who !== "me" && widgetQuickReplies(item.text).length > 0 && (
-                    <div className="react-widget-options">
-                      {widgetQuickReplies(item.text).map(([label, value]) => (
-                        <button key={`${index}-${label}`} type="button" onClick={() => sendWidgetQuickReply(value)}>{label}</button>
-                      ))}
-                    </div>
-                  )}
-                </React.Fragment>
-              ))}
-            </div>
-            <form className="react-widget-form" onSubmit={sendWidgetMessage}>
-              <input value={messageText} onChange={(event) => setMessageText(event.target.value)} placeholder="Escribe..." />
-              <button type="submit">Ir</button>
-            </form>
-          </>
+          <form className="react-widget-form" onSubmit={sendWidgetMessage}>
+            <input value={messageText} onChange={(event) => setMessageText(event.target.value)} placeholder="Escribe..." />
+            <button type="submit">Ir</button>
+          </form>
         )}
       </section>}
     </div>
@@ -502,7 +519,7 @@ function LandingPage() {
       <section className="public-section public-band"><div className="public-inner public-split"><div><h2>Un canal propio, sin depender de WhatsApp API</h2><p className="public-lead">El asistente vive en la página del cliente. WhatsApp oficial puede agregarse después como fase premium, pero el proyecto puede venderse y operar desde web desde el día uno.</p><a className="public-button" href={PROJECTS_URL}>Ver proceso de trabajo</a></div><div className="public-preview" aria-label="Vista previa del asistente"><header><span></span><span></span><span></span></header><div className="preview-lines"><b></b><i></i><i></i><i></i></div><div className="preview-chat"><strong>Asistente</strong><span></span><span></span><span></span></div></div></div></section>
       <section className="public-section" id="demos"><div className="public-inner"><h2>Demos como ejemplos, no como límite</h2><p className="public-lead">Estas demos muestran distintos tonos y flujos. El asistente se adapta a cualquier negocio que necesite responder, filtrar y dar seguimiento.</p><div className="public-grid three"><article><strong>Barbería / estética</strong><span>Servicios, precios, horarios y solicitudes de cita como ejemplo comercial.</span><a className="public-button" href={DEMO_BARBERIA_URL}>Ver demo</a></article><article><strong>Clínica dental</strong><span>Valoración, limpieza, urgencias y captura de paciente con tono profesional.</span><a className="public-button" href={DEMO_DENTAL_URL}>Ver demo</a></article><article><strong>Proyecto personalizado</strong><span>Talleres, consultorios, inmobiliarias, cursos, despachos, servicios técnicos y más.</span><a className="public-button" href={PROJECTS_URL}>Ver proyectos</a></article></div></div></section>
       <section className="public-section" id="paquetes"><div className="public-inner"><h2>Implementación por proyecto</h2><p className="public-lead">El precio depende del flujo, contenido y nivel de personalización. La idea es empezar ligero y crecer cuando el canal demuestre valor.</p><div className="public-grid three price-grid"><article><strong>Proyecto inicial</strong><b>$2,500+</b><span>Widget web, flujo conversacional, captura de leads y panel de seguimiento.</span></article><article><strong>Proyecto avanzado</strong><b>$6,000+</b><span>Landing personalizada, FAQs, reglas de negocio, agenda o cotización.</span></article><article><strong>Mantenimiento</strong><b>$500+</b><span>Hosting básico, soporte, ajustes menores y mejoras del flujo.</span></article></div></div></section>
-      <section className="public-section public-cta" id="contacto"><div className="public-inner cta-contact-wrap"><div><h2>Haz tu diagnóstico en el chat</h2><p className="public-lead">Abre el chat y escribe qué negocio tienes, tus servicios, horarios y qué quieres automatizar. El asistente te responderá con un ejemplo de flujo para tu caso.</p><div className="diagnosis-mini-grid"><span>Das contexto del negocio</span><span>Recibes ejemplo de conversación</span><span>Dejas tus datos de contacto</span></div><a className="public-button" href="#chat" onClick={openPublicChat}>Abrir diagnóstico</a></div><aside className="contact-note"><strong>Si te interesa implementarlo</strong><span>El chat te pedirá nombre, teléfono y correo antes de iniciar. Con esos datos puedo ponerme en contacto contigo para revisar tu proyecto y darte una propuesta.</span></aside></div></section>
+      <section className="public-section public-cta" id="contacto"><div className="public-inner cta-contact-wrap"><div><h2>Haz tu diagnóstico en el chat</h2><p className="public-lead">Abre el chat y escribe qué negocio tienes, tus servicios, horarios y qué quieres automatizar. El asistente te responderá con un ejemplo de flujo para tu caso.</p><div className="diagnosis-mini-grid"><span>Das contexto del negocio</span><span>Recibes ejemplo de conversación</span><span>Dejas tus datos de contacto al final</span></div><a className="public-button" href="#chat" onClick={openPublicChat}>Abrir diagnóstico</a></div><aside className="contact-note"><strong>Si te interesa implementarlo</strong><span>El chat te pedirá nombre, teléfono y correo al final del diagnóstico. Con esos datos puedo ponerme en contacto contigo para revisar tu proyecto y darte una propuesta.</span></aside></div></section>
       <PublicFooter />
       <PublicWidget businessId="demo_proyectos" />
     </main>
@@ -531,7 +548,7 @@ function DemoPage({ page }) {
       <section className="public-section public-band"><div className="public-inner"><h2>{page.infoTitle}</h2><p className="public-lead">{page.infoLead}</p><div className="public-grid three">{page.info.map(([name, desc]) => <article key={name}><strong>{name}</strong><span>{desc}</span></article>)}</div></div></section>
       <section className="public-section"><div className="public-inner public-split"><div><h2>{page.storyTitle}</h2><p className="public-lead">{page.story}</p><a className="public-button" href="#probar">Abrir chat</a></div><div className="demo-photo" aria-label={page.title}></div></div></section>
       <section className="public-section"><div className="public-inner"><h2>Preguntas frecuentes</h2><div className="public-grid three">{page.faqs.map(([question, answer]) => <article key={question}><strong>{question}</strong><span>{answer}</span></article>)}</div></div></section>
-      <section className="public-section public-cta" id="probar"><div className="public-inner"><h2>Prueba el asistente</h2><p className="public-lead">Abre el chat, deja tus datos y pregunta por un servicio u horario disponible.</p><a className="public-button" href="#chat" onClick={openPublicChat}>Abrir chat</a></div></section>
+      <section className="public-section public-cta" id="probar"><div className="public-inner"><h2>Prueba el asistente</h2><p className="public-lead">Abre el chat, pregunta por un servicio u horario disponible y deja tus datos solo cuando quieras seguimiento.</p><a className="public-button" href="#chat" onClick={openPublicChat}>Abrir chat</a></div></section>
       <PublicFooter label={page.title} />
       <PublicWidget businessId={page.businessId} />
     </main>
@@ -1425,7 +1442,7 @@ function AdminApp() {
   }
 
   const selectedLead = inbox.find((customer) => customer.id === selectedLeadId) || inbox[0];
-  const widgetScript = `<script src="${API_URL}/public/widget.js?v=20260428c" data-api-url="${API_URL}" data-business-id="${selected?.id || ""}"></script>`;
+  const widgetScript = `<script src="${API_URL}/public/widget.js?v=20260502a" data-api-url="${API_URL}" data-business-id="${selected?.id || ""}"></script>`;
   const publicLinks = [
     ["Landing general", LANDING_URL],
     ["Soluciones por proyecto", PROJECTS_URL],

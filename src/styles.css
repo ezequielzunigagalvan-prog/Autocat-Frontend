@@ -1716,6 +1716,12 @@ form button, .quick-actions button {
   align-content: center;
   gap: 10px;
 }
+.react-widget-contact {
+  height: auto;
+  align-content: start;
+  border-top: 1px solid #e2e6df;
+  background: #fff;
+}
 .react-widget-lead strong {
   color: #18211f;
   font-size: 18px;
