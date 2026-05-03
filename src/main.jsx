@@ -59,7 +59,13 @@ const CONTACT_FIELD_OPTIONS = [
   ["phone", "Teléfono / WhatsApp"],
   ["email", "Correo"],
   ["company", "Empresa"],
-  ["address", "Dirección / ubicación"]
+  ["position", "Puesto / cargo"],
+  ["address", "Dirección / ubicación"],
+  ["city", "Ciudad / zona"],
+  ["equipment", "Equipo / sistema"],
+  ["details", "Detalles adicionales"],
+  ["urgency", "Urgencia"],
+  ["preferredTime", "Horario preferido"]
 ];
 const DEFAULT_CONTACT_FIELDS = ["name", "phone"];
 const SEGMENT_OPTIONS = [
@@ -391,6 +397,7 @@ function PublicWidget({ businessId }) {
   const [contactNeeded, setContactNeeded] = useState(false);
   const [contactCaptured, setContactCaptured] = useState(false);
   const [selectedServiceName, setSelectedServiceName] = useState("");
+  const [selectedContactFields, setSelectedContactFields] = useState([]);
 
   useEffect(() => {
     setLeadForm({ name: defaults.name, phone: defaults.phone, email: defaults.email, company: "", address: "" });
@@ -400,6 +407,7 @@ function PublicWidget({ businessId }) {
     setContactNeeded(false);
     setContactCaptured(false);
     setSelectedServiceName("");
+    setSelectedContactFields([]);
     setLeadError("");
   }, [businessId]);
 
@@ -411,6 +419,7 @@ function PublicWidget({ businessId }) {
     setContactNeeded(false);
     setContactCaptured(false);
     setSelectedServiceName("");
+    setSelectedContactFields([]);
     setLeadError("");
   }
 
@@ -438,14 +447,31 @@ function PublicWidget({ businessId }) {
     if (match) setSelectedServiceName(match.name);
   }
 
+  function updateContactConfig(conversation = {}) {
+    if (Array.isArray(conversation.contactFields) && conversation.contactFields.length) {
+      setSelectedContactFields(conversation.contactFields);
+    }
+    if (conversation.serviceName) {
+      setSelectedServiceName(conversation.serviceName);
+    }
+  }
+
   const fieldMeta = {
     name: { placeholder: "Nombre", type: "text" },
     phone: { placeholder: "Teléfono / WhatsApp", type: "tel" },
     email: { placeholder: "Correo", type: "email" },
     company: { placeholder: "Empresa", type: "text" },
-    address: { placeholder: "Dirección / ubicación", type: "text" }
+    position: { placeholder: "Puesto / cargo", type: "text" },
+    address: { placeholder: "Dirección / ubicación", type: "text" },
+    city: { placeholder: "Ciudad / zona", type: "text" },
+    equipment: { placeholder: "Equipo / sistema", type: "text" },
+    details: { placeholder: "Detalles adicionales", type: "text" },
+    urgency: { placeholder: "Urgencia", type: "text" },
+    preferredTime: { placeholder: "Horario preferido", type: "text" }
   };
-  const selectedContactFields = contactFieldsForService(defaults.services || [], selectedServiceName);
+  const contactFieldsToRender = selectedContactFields.length
+    ? selectedContactFields
+    : contactFieldsForService(defaults.services || [], selectedServiceName);
 
   function shouldAskContact(conversation) {
     if (contactCaptured) return false;
@@ -472,7 +498,13 @@ function PublicWidget({ businessId }) {
           phone: leadForm.phone,
           email: leadForm.email,
           company: leadForm.company,
+          position: leadForm.position,
           address: leadForm.address,
+          city: leadForm.city,
+          equipment: leadForm.equipment,
+          details: leadForm.details,
+          urgency: leadForm.urgency,
+          preferredTime: leadForm.preferredTime,
           previousFrom: from,
           source: "widget_web",
           notes: "Lead capturado al final del chat"
@@ -502,6 +534,7 @@ function PublicWidget({ businessId }) {
       });
       const body = await response.json();
       setMessages((current) => [...current, { who: "bot", text: body.outboundText || "No pude responder en este momento." }]);
+      updateContactConfig(body);
       updateSelectedService(body.outboundText || "");
       if (shouldAskContact(body)) setContactNeeded(true);
     } catch {
@@ -568,7 +601,7 @@ function PublicWidget({ businessId }) {
           <form className="react-widget-lead react-widget-contact" onSubmit={submitContact}>
             <strong>Datos de contacto</strong>
             <span>Para que el equipo pueda darte seguimiento, déjame tus datos.</span>
-            {selectedContactFields.map((field) => (
+            {contactFieldsToRender.map((field) => (
               <input
                 key={field}
                 value={leadForm[field] || ""}
@@ -1707,7 +1740,7 @@ function AdminApp() {
         return new Date(a.followUpAt) - new Date(b.followUpAt);
       });
   }, [customers, followUpFilter]);
-  const widgetScript = `<script src="${API_URL}/public/widget.js?v=20260502a" data-api-url="${API_URL}" data-business-id="${selected?.id || ""}"></script>`;
+  const widgetScript = `<script src="${API_URL}/public/widget.js?v=20260503a" data-api-url="${API_URL}" data-business-id="${selected?.id || ""}"></script>`;
   const publicLinks = [
     ["Landing general", LANDING_URL],
     ["Soluciones por proyecto", PROJECTS_URL],

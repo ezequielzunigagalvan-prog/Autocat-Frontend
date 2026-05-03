@@ -803,8 +803,8 @@ form button, .quick-actions button {
   border: 1px solid #e2e6df;
   border-radius: 8px;
   padding: 10px;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 8px 12px;
 }
 .contact-field-options legend {
@@ -812,6 +812,9 @@ form button, .quick-actions button {
   color: #526158;
   font-size: 13px;
   font-weight: 800;
+}
+.contact-field-options .field-help {
+  grid-column: 1 / -1;
 }
 .settings-form .full-row {
   grid-column: 1 / -1;
