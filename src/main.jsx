@@ -429,6 +429,85 @@ function quoteDefaultContactFields() {
   return ["name", "phone", "email", "company", "city", "equipment", "urgency"];
 }
 
+function isDemoWidgetBusiness(businessId = "") {
+  return String(businessId).startsWith("demo_");
+}
+
+function localDemoWidgetReply(businessId, text) {
+  const normalized = normalizeText(text);
+  const isAppointmentDemo = ["demo_barberia", "demo_dental"].includes(businessId);
+
+  if (businessId === "demo_proyectos") {
+    if (normalized.includes("servicio")) {
+      return {
+        status: "auto_replied",
+        outboundText: [
+          "Claro. En una implementación real puedo ayudarte con:",
+          "",
+          "1. Responder preguntas frecuentes",
+          "2. Capturar solicitudes de cotización",
+          "3. Registrar citas o visitas",
+          "4. Pasar casos importantes a una persona",
+          "",
+          "Cuéntame qué negocio tienes, tus servicios y qué quieres automatizar."
+        ].join("\n")
+      };
+    }
+
+    if (normalized.includes("agendar") || normalized.includes("cita")) {
+      return {
+        status: "auto_replied",
+        outboundText: "Sí. Si tu proyecto necesita agenda, el bot puede pedir servicio, día, hora y datos del cliente. Después lo deja registrado en el panel para seguimiento."
+      };
+    }
+
+    if (normalized.includes("atencion") || normalized.includes("atención") || normalized.includes("persona")) {
+      return {
+        status: "needs_human",
+        outboundText: "Perfecto. Puedo marcar este caso para atención humana y pedir tus datos al final para que el equipo te contacte."
+      };
+    }
+
+    return {
+      status: "auto_replied",
+      outboundText: [
+        "Con esa información puedo armar un flujo de ejemplo para tu negocio.",
+        "",
+        "Primero dime:",
+        "1. Qué vendes o qué servicio das",
+        "2. Qué preguntas te hacen más",
+        "3. Qué datos quieres capturar",
+        "4. Si necesitas citas, cotizaciones o solo leads"
+      ].join("\n")
+    };
+  }
+
+  if (isAppointmentDemo) {
+    const serviceList = businessId === "demo_barberia"
+      ? "1. Corte clásico\n2. Corte + barba\n3. Barba premium\n4. Facial express"
+      : "1. Valoración inicial\n2. Limpieza dental\n3. Ortodoncia\n4. Urgencia dental";
+
+    if (normalized.includes("servicio")) {
+      return {
+        status: "auto_replied",
+        outboundText: `Estos son los servicios disponibles:\n${serviceList}\n\nResponde con el número o escribe el nombre del servicio que quieres agendar.`
+      };
+    }
+
+    if (normalized.includes("agendar") || normalized.includes("cita") || /\b[1-4]\b/.test(normalized)) {
+      return {
+        status: "auto_replied",
+        outboundText: "Perfecto. Para esta demo puedo registrar la solicitud de cita. Dime qué día y hora te gustaría, por ejemplo: mañana a las 4 pm."
+      };
+    }
+  }
+
+  return {
+    status: "auto_replied",
+    outboundText: "Puedo ayudarte con servicios, solicitudes y atención inicial. Elige una opción o cuéntame qué necesitas."
+  };
+}
+
 function parseWidgetQuickReplies(value) {
   if (Array.isArray(value)) return value.length ? value : DEFAULT_WIDGET_REPLIES;
   if (typeof value === "string") {
@@ -629,6 +708,7 @@ function PublicWidget({ businessId }) {
         body: JSON.stringify({ businessId, from, text })
       });
       const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "No se pudo conectar con el asistente.");
       setIsTyping(false);
       setMessages((current) => [...current, { who: "bot", text: body.outboundText || "No pude responder en este momento." }]);
       updateContactConfig(body);
@@ -636,6 +716,12 @@ function PublicWidget({ businessId }) {
       if (shouldAskContact(body)) setContactNeeded(true);
     } catch {
       setIsTyping(false);
+      if (isDemoWidgetBusiness(businessId)) {
+        const fallback = localDemoWidgetReply(businessId, text);
+        setMessages((current) => [...current, { who: "bot", text: fallback.outboundText }]);
+        if (shouldAskContact(fallback)) setContactNeeded(true);
+        return;
+      }
       setMessages((current) => [...current, { who: "bot", text: "No pude conectar con el asistente. Intenta de nuevo en un momento." }]);
     }
   }
