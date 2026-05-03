@@ -68,6 +68,22 @@ const CONTACT_FIELD_OPTIONS = [
   ["preferredTime", "Horario preferido"]
 ];
 const DEFAULT_CONTACT_FIELDS = ["name", "phone"];
+const WIDGET_STYLE_OPTIONS = [
+  ["premium", "Premium"],
+  ["industrial", "Industrial"],
+  ["minimal", "Minimalista"],
+  ["salud", "Salud"],
+  ["elegante", "Elegante"]
+];
+const WIDGET_POSITION_OPTIONS = [
+  ["right", "Derecha"],
+  ["left", "Izquierda"]
+];
+const DEFAULT_WIDGET_REPLIES = [
+  { label: "Ver servicios", value: "servicios" },
+  { label: "Solicitar cotización", value: "cotización" },
+  { label: "Atención", value: "atención" }
+];
 const SEGMENT_OPTIONS = [
   ["industrial", "Industrial / cotizaciones"],
   ["servicios", "Servicios generales"],
@@ -355,6 +371,19 @@ function contactFieldsForService(services = [], selectedServiceName = "") {
 
 function quoteDefaultContactFields() {
   return ["name", "phone", "email", "company", "city", "equipment", "urgency"];
+}
+
+function parseWidgetQuickReplies(value) {
+  if (Array.isArray(value)) return value.length ? value : DEFAULT_WIDGET_REPLIES;
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) && parsed.length ? parsed : DEFAULT_WIDGET_REPLIES;
+    } catch {
+      return DEFAULT_WIDGET_REPLIES;
+    }
+  }
+  return DEFAULT_WIDGET_REPLIES;
 }
 
 const widgetDefaults = {
@@ -1318,6 +1347,18 @@ function AdminApp() {
       widgetIntro: selected.widgetIntro || "Deja tus datos para responderte y dar seguimiento a tu solicitud.",
       widgetInitialMessage: selected.widgetInitialMessage || "",
       widgetPrompt: selected.widgetPrompt || "Quiero información sobre sus servicios",
+      widgetStyle: selected.widgetStyle || "premium",
+      widgetPrimaryColor: selected.widgetPrimaryColor || "#1f5c50",
+      widgetSecondaryColor: selected.widgetSecondaryColor || "#2f7a68",
+      widgetAccentColor: selected.widgetAccentColor || "#c66d42",
+      widgetBackgroundColor: selected.widgetBackgroundColor || "#f7f8f6",
+      widgetLauncherText: selected.widgetLauncherText || "Chat",
+      widgetAvatarText: selected.widgetAvatarText || "AI",
+      widgetPosition: selected.widgetPosition || "right",
+      widgetRadius: selected.widgetRadius || 24,
+      widgetQuickReplies: parseWidgetQuickReplies(selected.widgetQuickReplies),
+      widgetContactTitle: selected.widgetContactTitle || "Datos de contacto",
+      widgetContactIntro: selected.widgetContactIntro || "Para que el equipo pueda darte seguimiento, déjame tus datos.",
       whatsappSender: selected.whatsappSender || "",
       whatsappProvider: selected.whatsappProvider || "none",
       metaPhoneNumberId: selected.metaPhoneNumberId || "",
@@ -1406,14 +1447,41 @@ function AdminApp() {
 
   async function saveSettings(event) {
     event.preventDefault();
+    const payload = {
+      ...settingsForm,
+      widgetQuickReplies: (settingsForm.widgetQuickReplies || []).filter((item) => item.label?.trim() && item.value?.trim()),
+      weeklySchedule: JSON.stringify(scheduleForm)
+    };
     const response = await apiFetch(`/api/businesses/${selected.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...settingsForm, weeklySchedule: JSON.stringify(scheduleForm) })
+      body: JSON.stringify(payload)
     });
     const body = await response.json();
     setNotice(response.ok ? "Configuración guardada." : body.error || "No se pudo guardar.");
     await loadData(selected.id);
+  }
+
+  function updateWidgetQuickReply(index, field, value) {
+    setSettingsForm((current) => {
+      const replies = [...(current.widgetQuickReplies || DEFAULT_WIDGET_REPLIES)];
+      replies[index] = { ...replies[index], [field]: value };
+      return { ...current, widgetQuickReplies: replies };
+    });
+  }
+
+  function addWidgetQuickReply() {
+    setSettingsForm((current) => ({
+      ...current,
+      widgetQuickReplies: [...(current.widgetQuickReplies || DEFAULT_WIDGET_REPLIES), { label: "", value: "" }].slice(0, 6)
+    }));
+  }
+
+  function removeWidgetQuickReply(index) {
+    setSettingsForm((current) => ({
+      ...current,
+      widgetQuickReplies: (current.widgetQuickReplies || DEFAULT_WIDGET_REPLIES).filter((_, itemIndex) => itemIndex !== index)
+    }));
   }
 
   async function createClient(event) {
@@ -2257,9 +2325,87 @@ function AdminApp() {
                 <input value={settingsForm.widgetPrompt || ""} onChange={(event) => setSettingsForm((current) => ({ ...current, widgetPrompt: event.target.value }))} placeholder="Necesito cotizar filtración de aceite hidráulico" />
                 <small className="field-help">Texto de ejemplo que aparece listo para que el visitante lo envíe o lo cambie.</small>
               </label>
-              <div className="widget-config-preview full-row">
+              <div className="form-section-title">Diseño del widget</div>
+              <label>
+                <span>Estilo visual</span>
+                <select value={settingsForm.widgetStyle || "premium"} onChange={(event) => setSettingsForm((current) => ({ ...current, widgetStyle: event.target.value }))}>
+                  {WIDGET_STYLE_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                </select>
+                <small className="field-help">Sirve para identificar la intención visual del proyecto sin tocar el widget base.</small>
+              </label>
+              <label>
+                <span>Posición</span>
+                <select value={settingsForm.widgetPosition || "right"} onChange={(event) => setSettingsForm((current) => ({ ...current, widgetPosition: event.target.value }))}>
+                  {WIDGET_POSITION_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                </select>
+              </label>
+              <label>
+                <span>Texto del botón</span>
+                <input value={settingsForm.widgetLauncherText || ""} onChange={(event) => setSettingsForm((current) => ({ ...current, widgetLauncherText: event.target.value }))} placeholder="Chat" />
+              </label>
+              <label>
+                <span>Avatar</span>
+                <input maxLength={3} value={settingsForm.widgetAvatarText || ""} onChange={(event) => setSettingsForm((current) => ({ ...current, widgetAvatarText: event.target.value }))} placeholder="AI" />
+              </label>
+              <label>
+                <span>Color principal</span>
+                <input type="color" value={settingsForm.widgetPrimaryColor || "#1f5c50"} onChange={(event) => setSettingsForm((current) => ({ ...current, widgetPrimaryColor: event.target.value }))} />
+              </label>
+              <label>
+                <span>Color secundario</span>
+                <input type="color" value={settingsForm.widgetSecondaryColor || "#2f7a68"} onChange={(event) => setSettingsForm((current) => ({ ...current, widgetSecondaryColor: event.target.value }))} />
+              </label>
+              <label>
+                <span>Color de acción</span>
+                <input type="color" value={settingsForm.widgetAccentColor || "#c66d42"} onChange={(event) => setSettingsForm((current) => ({ ...current, widgetAccentColor: event.target.value }))} />
+              </label>
+              <label>
+                <span>Fondo del chat</span>
+                <input type="color" value={settingsForm.widgetBackgroundColor || "#f7f8f6"} onChange={(event) => setSettingsForm((current) => ({ ...current, widgetBackgroundColor: event.target.value }))} />
+              </label>
+              <label>
+                <span>Radio de esquinas</span>
+                <div className="unit-input">
+                  <input type="number" min="8" max="32" value={settingsForm.widgetRadius || 24} onChange={(event) => setSettingsForm((current) => ({ ...current, widgetRadius: Number(event.target.value) }))} />
+                  <small>px</small>
+                </div>
+              </label>
+              <label>
+                <span>Título del formulario</span>
+                <input value={settingsForm.widgetContactTitle || ""} onChange={(event) => setSettingsForm((current) => ({ ...current, widgetContactTitle: event.target.value }))} placeholder="Datos de contacto" />
+              </label>
+              <label className="full-row">
+                <span>Texto del formulario</span>
+                <input value={settingsForm.widgetContactIntro || ""} onChange={(event) => setSettingsForm((current) => ({ ...current, widgetContactIntro: event.target.value }))} placeholder="Para que el equipo pueda darte seguimiento..." />
+              </label>
+              <div className="quick-replies-editor full-row">
+                <div className="panel-heading compact">
+                  <div>
+                    <h3>Botones rápidos</h3>
+                    <p>Configura opciones iniciales por proyecto sin modificar otros clientes.</p>
+                  </div>
+                  <button type="button" onClick={addWidgetQuickReply}>Agregar opción</button>
+                </div>
+                {(settingsForm.widgetQuickReplies || DEFAULT_WIDGET_REPLIES).map((reply, index) => (
+                  <div className="quick-reply-row" key={`reply-${index}`}>
+                    <input value={reply.label || ""} onChange={(event) => updateWidgetQuickReply(index, "label", event.target.value)} placeholder="Etiqueta visible" />
+                    <input value={reply.value || ""} onChange={(event) => updateWidgetQuickReply(index, "value", event.target.value)} placeholder="Mensaje que envía" />
+                    <button type="button" onClick={() => removeWidgetQuickReply(index)}>Quitar</button>
+                  </div>
+                ))}
+              </div>
+              <div
+                className="widget-config-preview full-row"
+                style={{
+                  "--preview-primary": settingsForm.widgetPrimaryColor || "#1f5c50",
+                  "--preview-secondary": settingsForm.widgetSecondaryColor || "#2f7a68",
+                  "--preview-accent": settingsForm.widgetAccentColor || "#c66d42",
+                  "--preview-bg": settingsForm.widgetBackgroundColor || "#f7f8f6",
+                  "--preview-radius": `${settingsForm.widgetRadius || 24}px`
+                }}
+              >
                 <div className="widget-preview-header">
-                  <div className="widget-preview-avatar">AI</div>
+                  <div className="widget-preview-avatar">{settingsForm.widgetAvatarText || "AI"}</div>
                   <div>
                     <strong>{settingsForm.widgetTitle || "Asistente"}</strong>
                     <span>{settingsForm.widgetIntro || "Deja tus datos para responderte."}</span>
@@ -2268,9 +2414,9 @@ function AdminApp() {
                 <div className="widget-preview-body">
                   <p>{settingsForm.widgetInitialMessage || "Hola. Puedo ayudarte con servicios, cotizaciones y atención."}</p>
                   <div className="widget-preview-options">
-                    <button type="button">Ver servicios</button>
-                    <button type="button">{selectedIsQuoteBased ? "Solicitar cotización" : "Agendar cita"}</button>
-                    <button type="button">Atención</button>
+                    {(settingsForm.widgetQuickReplies || DEFAULT_WIDGET_REPLIES).slice(0, 3).map((reply) => (
+                      <button key={reply.label || reply.value} type="button">{reply.label || "Opción"}</button>
+                    ))}
                   </div>
                 </div>
               </div>

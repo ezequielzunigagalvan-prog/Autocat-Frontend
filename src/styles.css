@@ -861,12 +861,12 @@ form button, .quick-actions button {
 }
 .widget-config-preview {
   border: 1px solid #dce4de;
-  border-radius: 8px;
+  border-radius: var(--preview-radius, 8px);
   overflow: hidden;
   background: #fff;
 }
 .widget-preview-header {
-  background: #1f5c50;
+  background: linear-gradient(135deg, var(--preview-primary, #1f5c50), var(--preview-secondary, #2f7a68));
   color: #fff;
   display: grid;
   grid-template-columns: 40px 1fr;
@@ -881,7 +881,7 @@ form button, .quick-actions button {
   display: grid;
   place-items: center;
   background: #eef7f0;
-  color: #1f5c50;
+  color: var(--preview-primary, #1f5c50);
   font-weight: 900;
 }
 .widget-preview-header div:last-child {
@@ -903,7 +903,7 @@ form button, .quick-actions button {
   padding: 14px;
   display: grid;
   gap: 10px;
-  background: #f7f8f6;
+  background: var(--preview-bg, #f7f8f6);
 }
 .widget-preview-body p {
   width: fit-content;
@@ -927,6 +927,46 @@ form button, .quick-actions button {
   background: #fff;
   color: #3f4b45;
   padding: 0 12px;
+}
+.widget-preview-options button:first-child {
+  border-color: var(--preview-primary, #1f5c50);
+  color: var(--preview-primary, #1f5c50);
+}
+.quick-replies-editor {
+  border: 1px solid #e2e6df;
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+.panel-heading.compact {
+  align-items: center;
+  margin-bottom: 0;
+}
+.panel-heading.compact h3,
+.panel-heading.compact p {
+  margin: 0;
+}
+.panel-heading.compact button,
+.quick-reply-row button {
+  border: 0;
+  border-radius: 10px;
+  background: #eef3ee;
+  color: #24332c;
+  cursor: pointer;
+  min-height: 38px;
+  padding: 0 12px;
+}
+.quick-reply-row {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(150px, 1fr) minmax(180px, 1fr) auto;
+}
+.quick-reply-row input {
+  border: 1px solid #ccd5ce;
+  border-radius: 10px;
+  min-height: 40px;
+  padding: 0 10px;
 }
 .settings-form button, .staff-form button, .service-form button, .faq-form button, .customer-form button {
   grid-column: 1 / -1;
@@ -2206,6 +2246,7 @@ form button, .quick-actions button {
   .diagnosis-mini-grid,
   .ops-grid,
   .client-template-form { grid-template-columns: 1fr; }
+  .quick-reply-row { grid-template-columns: 1fr; }
   .client-cards article { align-items: stretch; flex-direction: column; }
   .public-section { padding: 54px 18px; }
   .public-preview { min-height: 280px; }
