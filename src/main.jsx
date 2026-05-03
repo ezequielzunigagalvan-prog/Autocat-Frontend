@@ -402,6 +402,7 @@ function PublicWidget({ businessId }) {
   const [contactCaptured, setContactCaptured] = useState(false);
   const [selectedServiceName, setSelectedServiceName] = useState("");
   const [selectedContactFields, setSelectedContactFields] = useState([]);
+  const [isTyping, setIsTyping] = useState(false);
 
   useEffect(() => {
     setLeadForm({ name: defaults.name, phone: defaults.phone, email: defaults.email, company: "", address: "" });
@@ -412,6 +413,7 @@ function PublicWidget({ businessId }) {
     setContactCaptured(false);
     setSelectedServiceName("");
     setSelectedContactFields([]);
+    setIsTyping(false);
     setLeadError("");
   }, [businessId]);
 
@@ -424,6 +426,7 @@ function PublicWidget({ businessId }) {
     setContactCaptured(false);
     setSelectedServiceName("");
     setSelectedContactFields([]);
+    setIsTyping(false);
     setLeadError("");
   }
 
@@ -534,17 +537,20 @@ function PublicWidget({ businessId }) {
     setMessageText("");
     setMessages((current) => [...current, { who: "me", text }]);
     try {
+      setIsTyping(true);
       const response = await fetch(API_URL + "/api/conversations/message", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ businessId, from, text })
       });
       const body = await response.json();
+      setIsTyping(false);
       setMessages((current) => [...current, { who: "bot", text: body.outboundText || "No pude responder en este momento." }]);
       updateContactConfig(body);
       updateSelectedService(body.outboundText || "");
       if (shouldAskContact(body)) setContactNeeded(true);
     } catch {
+      setIsTyping(false);
       setMessages((current) => [...current, { who: "bot", text: "No pude conectar con el asistente. Intenta de nuevo en un momento." }]);
     }
   }
@@ -603,6 +609,9 @@ function PublicWidget({ businessId }) {
               )}
             </React.Fragment>
           ))}
+          {isTyping && (
+            <p className="bot typing"><span>{defaults.title}</span><i></i><i></i><i></i></p>
+          )}
         </div>
         {contactNeeded ? (
           <form className="react-widget-lead react-widget-contact" onSubmit={submitContact}>
@@ -1747,7 +1756,7 @@ function AdminApp() {
         return new Date(a.followUpAt) - new Date(b.followUpAt);
       });
   }, [customers, followUpFilter]);
-  const widgetScript = `<script src="${API_URL}/public/widget.js?v=20260503b" data-api-url="${API_URL}" data-business-id="${selected?.id || ""}"></script>`;
+  const widgetScript = `<script src="${API_URL}/public/widget.js?v=20260503c" data-api-url="${API_URL}" data-business-id="${selected?.id || ""}"></script>`;
   const publicLinks = [
     ["Landing general", LANDING_URL],
     ["Soluciones por proyecto", PROJECTS_URL],
