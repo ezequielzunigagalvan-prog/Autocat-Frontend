@@ -41,11 +41,11 @@ const fallbackBackendUrl = isBrowserProduction ? DEFAULT_PRODUCTION_BACKEND_URL 
 const API_URL = cleanConfiguredUrl(rawApiUrl) || cleanConfiguredUrl(rawPublicAppUrl) || fallbackBackendUrl;
 const PUBLIC_APP_URL = cleanConfiguredUrl(rawPublicAppUrl) || API_URL;
 const FRONTEND_URL = window.location.origin;
-const LANDING_URL = `${PUBLIC_APP_URL}/landing.html`;
-const PROJECTS_URL = `${PUBLIC_APP_URL}/proyectos.html`;
-const DEMO_BARBERIA_URL = `${PUBLIC_APP_URL}/demo-barberia.html`;
-const DEMO_DENTAL_URL = `${PUBLIC_APP_URL}/demo-dental.html`;
-const ADMIN_URL = import.meta.env.VITE_ADMIN_URL || `${FRONTEND_URL}/#admin`;
+const LANDING_URL = `${FRONTEND_URL}`;
+const PROJECTS_URL = `${FRONTEND_URL}/proyectos`;
+const DEMO_BARBERIA_URL = `${FRONTEND_URL}/demo-barberia`;
+const DEMO_DENTAL_URL = `${FRONTEND_URL}/demo-dental`;
+const ADMIN_URL = import.meta.env.VITE_ADMIN_URL || `${FRONTEND_URL}/admin`;
 const LEAD_STATUSES = [
   ["all", "Todos"],
   ["nuevo", "Nuevos"],
