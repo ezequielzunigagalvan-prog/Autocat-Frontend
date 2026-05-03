@@ -353,6 +353,10 @@ function contactFieldsForService(services = [], selectedServiceName = "") {
   return parseServiceContactFields(selected);
 }
 
+function quoteDefaultContactFields() {
+  return ["name", "phone", "email", "company", "city", "equipment", "urgency"];
+}
+
 const widgetDefaults = {
   demo_barberia: {
     name: "Cliente Barbería",
@@ -472,6 +476,9 @@ function PublicWidget({ businessId }) {
   const contactFieldsToRender = selectedContactFields.length
     ? selectedContactFields
     : contactFieldsForService(defaults.services || [], selectedServiceName);
+  const visibleContactFields = /cotiza|cotización|cotizacion|filtr|industrial|proyecto|renta|curso/i.test(`${defaults.prompt} ${defaults.hello}`) && contactFieldsToRender.length <= 2
+    ? quoteDefaultContactFields()
+    : contactFieldsToRender;
 
   function shouldAskContact(conversation) {
     if (contactCaptured) return false;
@@ -601,7 +608,7 @@ function PublicWidget({ businessId }) {
           <form className="react-widget-lead react-widget-contact" onSubmit={submitContact}>
             <strong>Datos de contacto</strong>
             <span>Para que el equipo pueda darte seguimiento, déjame tus datos.</span>
-            {contactFieldsToRender.map((field) => (
+            {visibleContactFields.map((field) => (
               <input
                 key={field}
                 value={leadForm[field] || ""}
@@ -1740,7 +1747,7 @@ function AdminApp() {
         return new Date(a.followUpAt) - new Date(b.followUpAt);
       });
   }, [customers, followUpFilter]);
-  const widgetScript = `<script src="${API_URL}/public/widget.js?v=20260503a" data-api-url="${API_URL}" data-business-id="${selected?.id || ""}"></script>`;
+  const widgetScript = `<script src="${API_URL}/public/widget.js?v=20260503b" data-api-url="${API_URL}" data-business-id="${selected?.id || ""}"></script>`;
   const publicLinks = [
     ["Landing general", LANDING_URL],
     ["Soluciones por proyecto", PROJECTS_URL],
