@@ -1003,16 +1003,31 @@ form button, .quick-actions button {
   grid-column: 1 / -1;
 }
 .service-form {
-  grid-template-columns: minmax(150px, 1fr) minmax(110px, 0.55fr) minmax(110px, 0.55fr) minmax(110px, 0.55fr);
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
   margin-bottom: 12px;
+}
+.service-form .full-row {
+  grid-column: 1 / -1;
+}
+.service-form textarea {
+  min-height: 116px;
+  padding: 12px;
+  resize: vertical;
 }
 .service-connector-options {
   border: 1px solid #e2e6df;
   border-radius: 8px;
   display: grid;
-  gap: 10px;
+  gap: 12px;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   padding: 12px;
+}
+.service-connector-options legend {
+  padding: 0 6px;
+}
+.service-connector-options label:not(.inline-check) {
+  display: grid;
+  gap: 6px;
 }
 .service-connector-options .inline-check,
 .service-connector-options .field-help {
