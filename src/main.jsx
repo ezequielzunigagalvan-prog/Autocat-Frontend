@@ -68,6 +68,8 @@ const CONTACT_FIELD_OPTIONS = [
   ["preferredTime", "Horario preferido"]
 ];
 const DEFAULT_CONTACT_FIELDS = ["name", "phone"];
+const DEFAULT_CONNECTOR_QUESTION = "¿Quieres que prepare una solicitud de cotización para este servicio?";
+const DEFAULT_CONNECTOR_CTA = "Solicitar cotización";
 const WIDGET_STYLE_OPTIONS = [
   ["premium", "Premium"],
   ["industrial", "Industrial"],
@@ -109,12 +111,66 @@ const CLIENT_TEMPLATES = {
     widgetInitialMessage: "Hola. Puedo ayudarte con servicios de filtración, lubricación industrial y solicitudes de cotización. Cuéntame qué servicio necesitas y en qué planta o ciudad se requiere.",
     widgetPrompt: "Necesito cotizar filtración de aceite hidráulico",
     services: [
-      { name: "Filtración de aceite hidráulico", durationMinutes: 60, price: 0, bufferMinutes: 10 },
-      { name: "Filtración de aceite dieléctrico", durationMinutes: 60, price: 0, bufferMinutes: 10 },
-      { name: "Lubricación industrial", durationMinutes: 60, price: 0, bufferMinutes: 10 },
-      { name: "Análisis de aceite", durationMinutes: 45, price: 0, bufferMinutes: 10 },
-      { name: "Flushing o limpieza de sistema", durationMinutes: 60, price: 0, bufferMinutes: 10 },
-      { name: "Cotización de servicio en planta", durationMinutes: 60, price: 0, bufferMinutes: 10 }
+      {
+        name: "Filtración de aceite hidráulico",
+        description: "Remoción de partículas, humedad y contaminantes en sistemas hidráulicos. Para cotizar se revisa volumen, tipo de aceite, condición actual y ubicación.",
+        connectorQuestion: "¿Quieres que prepare una solicitud de cotización para filtración de aceite hidráulico?",
+        connectorCta: "Cotizar filtración hidráulica",
+        durationMinutes: 60,
+        price: 0,
+        bufferMinutes: 10,
+        contactFields: ["name", "phone", "company", "city", "equipment", "details", "urgency"]
+      },
+      {
+        name: "Filtración de aceite dieléctrico",
+        description: "Servicio enfocado en aceites dieléctricos, sujeto a condiciones del fluido, equipo, volumen y pruebas requeridas.",
+        connectorQuestion: "¿Quieres solicitar una cotización para filtración de aceite dieléctrico?",
+        connectorCta: "Cotizar aceite dieléctrico",
+        durationMinutes: 60,
+        price: 0,
+        bufferMinutes: 10,
+        contactFields: ["name", "phone", "company", "city", "equipment", "details", "urgency"]
+      },
+      {
+        name: "Lubricación industrial",
+        description: "Apoyo para planes de lubricación, selección de lubricantes, rutinas, frecuencias y control de puntos críticos.",
+        connectorQuestion: "¿Quieres que revisemos tu caso de lubricación industrial?",
+        connectorCta: "Solicitar revisión",
+        durationMinutes: 60,
+        price: 0,
+        bufferMinutes: 10,
+        contactFields: ["name", "phone", "company", "position", "city", "equipment", "details"]
+      },
+      {
+        name: "Análisis de aceite",
+        description: "Evaluación del estado del lubricante para detectar contaminación, desgaste y riesgos operativos.",
+        connectorQuestion: "¿Quieres solicitar seguimiento para análisis de aceite?",
+        connectorCta: "Solicitar análisis",
+        durationMinutes: 45,
+        price: 0,
+        bufferMinutes: 10,
+        contactFields: ["name", "phone", "company", "equipment", "details"]
+      },
+      {
+        name: "Flushing o limpieza de sistema",
+        description: "Limpieza interna de sistemas para remover residuos y contaminación antes de operación o cambio de fluido.",
+        connectorQuestion: "¿Quieres que preparemos una solicitud para flushing o limpieza de sistema?",
+        connectorCta: "Cotizar flushing",
+        durationMinutes: 60,
+        price: 0,
+        bufferMinutes: 10,
+        contactFields: ["name", "phone", "company", "city", "equipment", "details", "urgency"]
+      },
+      {
+        name: "Cotización de servicio en planta",
+        description: "Solicitud general para revisar un servicio técnico directamente en planta según alcance, ubicación y disponibilidad.",
+        connectorQuestion: "¿Quieres registrar una solicitud para servicio en planta?",
+        connectorCta: "Registrar solicitud",
+        durationMinutes: 60,
+        price: 0,
+        bufferMinutes: 10,
+        contactFields: ["name", "phone", "company", "position", "city", "details", "urgency"]
+      }
     ],
     faqs: [
       { question: "¿Qué datos necesitan para cotizar?", answer: "Empresa, ubicación, servicio requerido, tipo de equipo, capacidad aproximada en litros, condición actual del fluido y urgencia." },
@@ -1258,6 +1314,10 @@ function AdminApp() {
   const [serviceForm, setServiceForm] = useState({
     id: "",
     name: "",
+    description: "",
+    connectorEnabled: true,
+    connectorQuestion: DEFAULT_CONNECTOR_QUESTION,
+    connectorCta: DEFAULT_CONNECTOR_CTA,
     durationMinutes: 45,
     price: 0,
     bufferMinutes: 10,
@@ -1591,6 +1651,10 @@ function AdminApp() {
     setServiceForm({
       id: service.id,
       name: service.name,
+      description: service.description || "",
+      connectorEnabled: service.connectorEnabled ?? true,
+      connectorQuestion: service.connectorQuestion || DEFAULT_CONNECTOR_QUESTION,
+      connectorCta: service.connectorCta || DEFAULT_CONNECTOR_CTA,
       durationMinutes: service.durationMinutes,
       price: service.price,
       bufferMinutes: service.bufferMinutes ?? selected.defaultBufferMinutes ?? 10,
@@ -1604,6 +1668,10 @@ function AdminApp() {
     if (!serviceForm.name.trim()) return;
     const payload = {
       name: serviceForm.name,
+      description: serviceForm.description || "",
+      connectorEnabled: Boolean(serviceForm.connectorEnabled),
+      connectorQuestion: serviceForm.connectorQuestion || DEFAULT_CONNECTOR_QUESTION,
+      connectorCta: serviceForm.connectorCta || DEFAULT_CONNECTOR_CTA,
       durationMinutes: Number(serviceForm.durationMinutes),
       price: Number(serviceForm.price),
       bufferMinutes: Number(serviceForm.bufferMinutes),
@@ -1621,7 +1689,19 @@ function AdminApp() {
     const body = await response.json();
     setNotice(response.ok ? "Servicio guardado." : body.error || "No se pudo guardar el servicio.");
     if (response.ok) {
-      setServiceForm({ id: "", name: "", durationMinutes: 45, price: 0, bufferMinutes: 10, contactFields: DEFAULT_CONTACT_FIELDS, active: true });
+      setServiceForm({
+        id: "",
+        name: "",
+        description: "",
+        connectorEnabled: true,
+        connectorQuestion: DEFAULT_CONNECTOR_QUESTION,
+        connectorCta: DEFAULT_CONNECTOR_CTA,
+        durationMinutes: 45,
+        price: 0,
+        bufferMinutes: 10,
+        contactFields: DEFAULT_CONTACT_FIELDS,
+        active: true
+      });
       await loadData(selected.id);
     }
   }
@@ -2030,7 +2110,7 @@ function AdminApp() {
               onClick={() => setSelectedId(business.id)}
             >
               {business.niche === "clinica_dental" ? <Stethoscope size={18} /> : <Scissors size={18} />}
-              <span>{business.name}</span>
+              <span>{String(business.clientNumber || 0).padStart(3, "0")} · {business.name}</span>
             </button>
           ))}
         </nav>
@@ -2042,7 +2122,7 @@ function AdminApp() {
             <p>{view === "clients" ? "panel principal" : selected?.niche?.replace("_", " ")}</p>
             <h1>{view === "clients" ? "Clientes y oportunidades" : view === "settings" ? "Configuración" : view === "conversations" ? "Conversaciones" : view === "appointments" ? "Citas" : view === "followups" ? "Seguimientos" : view === "internal" ? "Control interno" : selected?.name || "AutoChat"}</h1>
           </div>
-          <span>{view === "clients" ? "Vista general de proyectos" : view === "settings" ? selected?.name : view === "conversations" ? selected?.name || "Historial de chats" : view === "appointments" ? selected?.name || "Agenda del negocio" : view === "followups" ? selected?.name || "Próximas acciones" : view === "internal" ? "Administración privada de AutoChat" : "Asistente web + captura de leads"}</span>
+          <span>{view === "clients" ? "Vista general de proyectos" : view === "internal" ? "Administración privada de AutoChat" : selected?.clientNumber ? `Cliente ${String(selected.clientNumber).padStart(3, "0")} · ${selected.name}` : "Asistente web + captura de leads"}</span>
         </header>
 
         {notice && <button className="notice" onClick={() => setNotice("")}>{notice}</button>}
@@ -2158,7 +2238,7 @@ function AdminApp() {
                 <div className="internal-list">
                   {(internalOverview?.recentBusinesses || []).map((business) => (
                     <article key={business.id}>
-                      <strong>{business.name}</strong>
+                      <strong>Cliente {String(business.clientNumber || 0).padStart(3, "0")} · {business.name}</strong>
                       <span>{business.niche} · {business.automationType}</span>
                       <small>{business.customers} leads · {business.conversations} mensajes · {business.appointments} citas</small>
                       <small>{business.owners?.map((owner) => `${owner.name} (${owner.email})`).join(", ") || "Sin dueño visible"}</small>
@@ -2209,7 +2289,7 @@ function AdminApp() {
             <div className="client-cards">
               {(mainDashboard?.clients || businesses).map((business) => (
                 <article key={business.id}>
-                  <div><strong>{business.name}</strong><span>{business.niche?.replace("_", " ")}{business.phone ? ` · ${business.phone}` : ""}</span><small>{business.leads ?? 0} leads · {business.conversations ?? 0} mensajes · {business.appointments ?? 0} citas</small></div>
+                  <div><strong>Cliente {String(business.clientNumber || 0).padStart(3, "0")} · {business.name}</strong><span>{business.niche?.replace("_", " ")}{business.phone ? ` · ${business.phone}` : ""}</span><small>{business.leads ?? 0} leads · {business.conversations ?? 0} mensajes · {business.appointments ?? 0} citas</small></div>
                   <div className="mini-actions"><button type="button" onClick={() => { setSelectedId(business.id); setView("dashboard"); }}>Dashboard</button><button type="button" onClick={() => { setSelectedId(business.id); setView("settings"); }}>Configuración</button></div>
                 </article>
               ))}
@@ -2584,6 +2664,43 @@ function AdminApp() {
                   placeholder="Corte, limpieza, valoración"
                 />
               </label>
+              <label className="full-row">
+                <span>Descripción que dará el bot</span>
+                <textarea
+                  value={serviceForm.description}
+                  onChange={(event) => setServiceForm((current) => ({ ...current, description: event.target.value }))}
+                  placeholder="Explica qué incluye el servicio, cuándo aplica y qué se necesita para cotizarlo."
+                />
+                <small className="field-help">Este texto aparece cuando el cliente selecciona el servicio.</small>
+              </label>
+              <fieldset className="service-connector-options full-row">
+                <legend>Conector después de seleccionar el servicio</legend>
+                <label className="inline-check">
+                  <input
+                    type="checkbox"
+                    checked={serviceForm.connectorEnabled}
+                    onChange={(event) => setServiceForm((current) => ({ ...current, connectorEnabled: event.target.checked }))}
+                  />
+                  Mostrar descripción y preguntar si desea cotización
+                </label>
+                <label>
+                  <span>Pregunta del conector</span>
+                  <input
+                    value={serviceForm.connectorQuestion}
+                    onChange={(event) => setServiceForm((current) => ({ ...current, connectorQuestion: event.target.value }))}
+                    placeholder={DEFAULT_CONNECTOR_QUESTION}
+                  />
+                </label>
+                <label>
+                  <span>Texto del botón / opción</span>
+                  <input
+                    value={serviceForm.connectorCta}
+                    onChange={(event) => setServiceForm((current) => ({ ...current, connectorCta: event.target.value }))}
+                    placeholder={DEFAULT_CONNECTOR_CTA}
+                  />
+                </label>
+                <small className="field-help">Útil para proyectos como Hidrolub: el bot explica el servicio y luego guía hacia cotización.</small>
+              </fieldset>
               <label>
                 <span>{selectedIsQuoteBased ? "Duración interna opcional" : "Duración"}</span>
                 <div className="unit-input">
@@ -2654,6 +2771,8 @@ function AdminApp() {
                 <article key={service.id}>
                   <strong>{service.name}</strong>
                   <span>{selectedIsQuoteBased ? "Por cotizar según condiciones del cliente" : `${service.durationMinutes} min, $${service.price}, margen ${service.bufferMinutes ?? selected.defaultBufferMinutes} min`}</span>
+                  {service.description && <small>Descripción: {service.description}</small>}
+                  <small>Conector: {service.connectorEnabled === false ? "apagado" : service.connectorCta || DEFAULT_CONNECTOR_CTA}</small>
                   <small>Datos: {parseServiceContactFields(service).map((field) => CONTACT_FIELD_OPTIONS.find(([value]) => value === field)?.[1] || field).join(", ")}</small>
                   <div className="mini-actions">
                     <button type="button" onClick={() => editService(service)}>Editar</button>

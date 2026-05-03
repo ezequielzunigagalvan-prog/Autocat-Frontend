@@ -1006,6 +1006,18 @@ form button, .quick-actions button {
   grid-template-columns: minmax(150px, 1fr) minmax(110px, 0.55fr) minmax(110px, 0.55fr) minmax(110px, 0.55fr);
   margin-bottom: 12px;
 }
+.service-connector-options {
+  border: 1px solid #e2e6df;
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  padding: 12px;
+}
+.service-connector-options .inline-check,
+.service-connector-options .field-help {
+  grid-column: 1 / -1;
+}
 .service-form .inline-check {
   grid-column: 1 / -1;
 }
@@ -1696,6 +1708,7 @@ form button, .quick-actions button {
   .chat-bubble { max-width: 92%; }
   .appointments-layout,
   .appointment-card { grid-template-columns: 1fr; }
+  .service-connector-options { grid-template-columns: 1fr; }
   .appointment-actions { flex-direction: row; flex-wrap: wrap; }
 }
 
