@@ -792,8 +792,9 @@ function buildLeadSummary(customer, format = "whatsapp") {
   return lines.join(format === "email" ? "\n" : "\n");
 }
 
-function ConversationsPanel({ conversations = [], customers = [], selectedBusiness }) {
+function ConversationsPanel({ conversations = [], customers = [], selectedBusiness, deleteConversations }) {
   const [selectedFrom, setSelectedFrom] = useState("");
+  const [selectedConversationIds, setSelectedConversationIds] = useState([]);
 
   const conversationsByCustomer = useMemo(() => {
     const groups = {};
@@ -837,6 +838,10 @@ function ConversationsPanel({ conversations = [], customers = [], selectedBusine
     }
   }, [conversationsByCustomer, selectedFrom]);
 
+  useEffect(() => {
+    setSelectedConversationIds((current) => current.filter((id) => conversations.some((conversation) => conversation.id === id)));
+  }, [conversations]);
+
   function getLeadStatusLabel(status) {
     const labels = {
       nuevo: "Nuevo",
@@ -849,6 +854,27 @@ function ConversationsPanel({ conversations = [], customers = [], selectedBusine
   }
 
   const selectedQuote = getQuoteRequestInfo(selectedThread?.customer);
+  const selectedThreadIds = selectedThread?.messages?.map((message) => message.id) || [];
+  const allThreadSelected = selectedThreadIds.length > 0 && selectedThreadIds.every((id) => selectedConversationIds.includes(id));
+
+  function toggleConversationSelection(id) {
+    setSelectedConversationIds((current) => (
+      current.includes(id) ? current.filter((item) => item !== id) : [...current, id]
+    ));
+  }
+
+  function toggleSelectedThread() {
+    setSelectedConversationIds((current) => {
+      if (allThreadSelected) return current.filter((id) => !selectedThreadIds.includes(id));
+      return [...new Set([...current, ...selectedThreadIds])];
+    });
+  }
+
+  async function handleDeleteSelected() {
+    if (!selectedConversationIds.length) return;
+    await deleteConversations(selectedConversationIds);
+    setSelectedConversationIds([]);
+  }
 
   return (
     <div className="conversations-layout">
@@ -857,6 +883,14 @@ function ConversationsPanel({ conversations = [], customers = [], selectedBusine
           <div>
             <h2><MessageSquareText size={20} /> Conversaciones</h2>
             <p>Chats recibidos para {selectedBusiness?.name || "este negocio"}.</p>
+          </div>
+          <div className="conversation-toolbar">
+            <button type="button" onClick={toggleSelectedThread} disabled={!selectedThreadIds.length}>
+              {allThreadSelected ? "Quitar selección" : "Seleccionar chat"}
+            </button>
+            <button type="button" className="danger" onClick={handleDeleteSelected} disabled={!selectedConversationIds.length}>
+              Borrar {selectedConversationIds.length || ""}
+            </button>
           </div>
         </div>
 
@@ -964,7 +998,15 @@ function ConversationsPanel({ conversations = [], customers = [], selectedBusine
 
             <div className="chat-thread">
               {selectedThread.messages.map((message) => (
-                <React.Fragment key={message.id}>
+                <div key={message.id} className={selectedConversationIds.includes(message.id) ? "chat-message-pair selected" : "chat-message-pair"}>
+                  <label className="conversation-select">
+                    <input
+                      type="checkbox"
+                      checked={selectedConversationIds.includes(message.id)}
+                      onChange={() => toggleConversationSelection(message.id)}
+                    />
+                    <span>Seleccionar</span>
+                  </label>
                   {message.inboundText && (
                     <div className="chat-bubble user">
                       <span>Cliente</span>
@@ -980,7 +1022,7 @@ function ConversationsPanel({ conversations = [], customers = [], selectedBusine
                       <small>{message.status}</small>
                     </div>
                   )}
-                </React.Fragment>
+                </div>
               ))}
             </div>
           </>
@@ -1416,6 +1458,17 @@ function AdminApp() {
       method: "DELETE"
     });
     setNotice(response.ok ? "Bloqueo eliminado." : "No se pudo eliminar el bloqueo.");
+    await loadData(selected.id);
+  }
+
+  async function deleteConversations(ids) {
+    const response = await apiFetch("/api/conversations", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids })
+    });
+    const body = await response.json();
+    setNotice(response.ok ? `Conversaciones borradas: ${body.deleted || 0}.` : body.error || "No se pudieron borrar las conversaciones.");
     await loadData(selected.id);
   }
 
@@ -2000,6 +2053,7 @@ function AdminApp() {
               conversations={conversations}
               customers={customers}
               selectedBusiness={selected}
+              deleteConversations={deleteConversations}
             />
           )}
 
@@ -2385,6 +2439,7 @@ function AdminApp() {
                     <p>Configura opciones iniciales por proyecto sin modificar otros clientes.</p>
                   </div>
                   <button type="button" onClick={addWidgetQuickReply}>Agregar opción</button>
+                  <button type="submit">Guardar respuestas</button>
                 </div>
                 {(settingsForm.widgetQuickReplies || DEFAULT_WIDGET_REPLIES).map((reply, index) => (
                   <div className="quick-reply-row" key={`reply-${index}`}>
@@ -2565,7 +2620,7 @@ function AdminApp() {
                   <small>min</small>
                 </div>
               </label>
-              <fieldset className="contact-field-options">
+              <fieldset className="contact-field-options full-row">
                 <legend>Datos que pedirá este servicio</legend>
                 {CONTACT_FIELD_OPTIONS.map(([value, label]) => (
                   <label key={value} className="inline-check">
@@ -2798,16 +2853,31 @@ function AdminApp() {
           </div>}
 
           {view === "dashboard" && <div className="panel chat-panel">
-            <h2><MessageSquareText size={20} /> Prueba del bot</h2>
-            <div className="messages">
-              {conversations.map((item) => (
-                <article key={item.id}>
-                  <span>{item.from}</span>
-                  <p>{item.inboundText}</p>
-                  <strong>{item.outboundText}</strong>
-                </article>
-              ))}
+            <div className="panel-heading">
+              <div>
+                <h2><MessageSquareText size={20} /> Historial de conversaciones</h2>
+                <p>Vista rápida tipo bandeja. Abre Conversaciones para seleccionar y borrar mensajes.</p>
+              </div>
+              <button type="button" onClick={() => setView("conversations")}>Abrir bandeja</button>
             </div>
+            <div className="dashboard-chat-list">
+              {[...conversations].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 6).map((item) => {
+                const customer = customers.find((entry) => entry.phone === item.from);
+                return (
+                  <article key={item.id}>
+                    <div className="conversation-avatar">{(customer?.name || item.from || "?").slice(0, 1).toUpperCase()}</div>
+                    <div>
+                      <strong>{customer?.name || item.from}</strong>
+                      <span>{item.inboundText || "Sin mensaje del cliente"}</span>
+                      <small>{item.outboundText || "Sin respuesta registrada"}</small>
+                    </div>
+                    <time>{formatDate(item.createdAt)}</time>
+                  </article>
+                );
+              })}
+              {!conversations.length && <p className="empty">Todavía no hay conversaciones.</p>}
+            </div>
+            <h3>Prueba rápida del bot</h3>
             <form className="chat-form" onSubmit={sendMessage}>
               <input value={sender} onChange={(event) => setSender(event.target.value)} aria-label="Cliente" />
               <input value={message} onChange={(event) => setMessage(event.target.value)} aria-label="Mensaje" />

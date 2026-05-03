@@ -802,10 +802,10 @@ form button, .quick-actions button {
 .contact-field-options {
   border: 1px solid #e2e6df;
   border-radius: 8px;
-  padding: 10px;
+  padding: 12px;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 8px 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 10px;
 }
 .contact-field-options legend {
   padding: 0 6px;
@@ -815,6 +815,21 @@ form button, .quick-actions button {
 }
 .contact-field-options .field-help {
   grid-column: 1 / -1;
+}
+.contact-field-options .inline-check {
+  align-items: center;
+  border: 1px solid #eef1ec;
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  grid-template-columns: 22px 1fr;
+  min-height: 40px;
+  padding: 8px;
+}
+.contact-field-options .inline-check input {
+  height: 18px;
+  margin: 0;
+  width: 18px;
 }
 .settings-form .full-row {
   grid-column: 1 / -1;
@@ -1166,6 +1181,71 @@ form button, .quick-actions button {
   gap: 8px;
 }
 
+.conversation-toolbar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.conversation-toolbar button {
+  border: 0;
+  border-radius: 999px;
+  background: #eef2ed;
+  color: #24332c;
+  cursor: pointer;
+  min-height: 36px;
+  padding: 0 12px;
+}
+
+.conversation-toolbar button.danger {
+  background: #fee9e2;
+  color: #9b321c;
+}
+
+.conversation-toolbar button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.dashboard-chat-list {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.dashboard-chat-list article {
+  align-items: center;
+  border: 1px solid #e2e6df;
+  border-radius: 12px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  padding: 10px;
+}
+
+.dashboard-chat-list article > div:nth-child(2) {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.dashboard-chat-list strong,
+.dashboard-chat-list span,
+.dashboard-chat-list small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-chat-list span,
+.dashboard-chat-list small,
+.dashboard-chat-list time {
+  color: #647168;
+  font-size: 12px;
+}
+
 .conversation-item {
   width: 100%;
   border: 1px solid #e2e6df;
@@ -1349,10 +1429,37 @@ form button, .quick-actions button {
 .chat-thread {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   max-height: 52vh;
   overflow-y: auto;
   padding-right: 6px;
+}
+
+.chat-message-pair {
+  border: 1px solid transparent;
+  border-radius: 12px;
+  display: grid;
+  gap: 8px;
+  padding: 6px;
+}
+
+.chat-message-pair.selected {
+  background: #f2f7f3;
+  border-color: #9db9a8;
+}
+
+.conversation-select {
+  align-items: center;
+  color: #647168;
+  display: flex;
+  font-size: 12px;
+  gap: 6px;
+}
+
+.conversation-select input {
+  height: 16px;
+  margin: 0;
+  width: 16px;
 }
 
 .chat-bubble {
@@ -1585,6 +1692,7 @@ form button, .quick-actions button {
   .conversations-layout,
   .conversation-customer-card,
   .quote-request-card dl { grid-template-columns: 1fr; }
+  .contact-field-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .chat-bubble { max-width: 92%; }
   .appointments-layout,
   .appointment-card { grid-template-columns: 1fr; }
@@ -2247,6 +2355,7 @@ form button, .quick-actions button {
   .ops-grid,
   .client-template-form { grid-template-columns: 1fr; }
   .quick-reply-row { grid-template-columns: 1fr; }
+  .contact-field-options { grid-template-columns: 1fr; }
   .client-cards article { align-items: stretch; flex-direction: column; }
   .public-section { padding: 54px 18px; }
   .public-preview { min-height: 280px; }
