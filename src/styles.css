@@ -799,6 +799,20 @@ form button, .quick-actions button {
   display: grid;
   gap: 6px;
 }
+.contact-field-options {
+  border: 1px solid #e2e6df;
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+.contact-field-options legend {
+  padding: 0 6px;
+  color: #526158;
+  font-size: 13px;
+  font-weight: 800;
+}
 .settings-form .full-row {
   grid-column: 1 / -1;
 }

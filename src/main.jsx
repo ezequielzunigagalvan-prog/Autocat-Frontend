@@ -54,6 +54,14 @@ const LEAD_STATUSES = [
   ["ganado", "Ganados"],
   ["perdido", "Perdidos"]
 ];
+const CONTACT_FIELD_OPTIONS = [
+  ["name", "Nombre"],
+  ["phone", "Teléfono / WhatsApp"],
+  ["email", "Correo"],
+  ["company", "Empresa"],
+  ["address", "Dirección / ubicación"]
+];
+const DEFAULT_CONTACT_FIELDS = ["name", "phone"];
 const SEGMENT_OPTIONS = [
   ["industrial", "Industrial / cotizaciones"],
   ["servicios", "Servicios generales"],
@@ -313,6 +321,32 @@ function PublicNav({ compact = false }) {
   );
 }
 
+function normalizeText(value = "") {
+  return String(value)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "");
+}
+
+function parseServiceContactFields(service) {
+  if (Array.isArray(service?.contactFields)) return service.contactFields.length ? service.contactFields : DEFAULT_CONTACT_FIELDS;
+  if (typeof service?.contactFields === "string") {
+    try {
+      const parsed = JSON.parse(service.contactFields);
+      return Array.isArray(parsed) && parsed.length ? parsed : DEFAULT_CONTACT_FIELDS;
+    } catch {
+      return DEFAULT_CONTACT_FIELDS;
+    }
+  }
+  return DEFAULT_CONTACT_FIELDS;
+}
+
+function contactFieldsForService(services = [], selectedServiceName = "") {
+  if (!selectedServiceName) return ["name", "phone", "email"];
+  const selected = services.find((service) => normalizeText(service.name) === normalizeText(selectedServiceName));
+  return parseServiceContactFields(selected);
+}
+
 const widgetDefaults = {
   demo_barberia: {
     name: "Cliente Barbería",
@@ -351,29 +385,32 @@ function PublicWidget({ businessId }) {
   const [isOpen, setIsOpen] = useState(() => window.location.hash === "#chat");
   const [from, setFrom] = useState(() => `web-${businessId || "default"}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
   const [leadError, setLeadError] = useState("");
-  const [leadForm, setLeadForm] = useState({ name: defaults.name, phone: defaults.phone, email: defaults.email });
+  const [leadForm, setLeadForm] = useState({ name: defaults.name, phone: defaults.phone, email: defaults.email, company: "", address: "" });
   const [messageText, setMessageText] = useState(defaults.prompt);
   const [messages, setMessages] = useState([{ who: "bot", text: initialGreeting }]);
   const [contactNeeded, setContactNeeded] = useState(false);
   const [contactCaptured, setContactCaptured] = useState(false);
+  const [selectedServiceName, setSelectedServiceName] = useState("");
 
   useEffect(() => {
-    setLeadForm({ name: defaults.name, phone: defaults.phone, email: defaults.email });
+    setLeadForm({ name: defaults.name, phone: defaults.phone, email: defaults.email, company: "", address: "" });
     setMessageText(defaults.prompt);
     setMessages([{ who: "bot", text: initialGreeting }]);
     setFrom(`web-${businessId || "default"}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
     setContactNeeded(false);
     setContactCaptured(false);
+    setSelectedServiceName("");
     setLeadError("");
   }, [businessId]);
 
   function resetPublicWidget() {
-    setLeadForm({ name: defaults.name, phone: defaults.phone, email: defaults.email });
+    setLeadForm({ name: defaults.name, phone: defaults.phone, email: defaults.email, company: "", address: "" });
     setMessageText(defaults.prompt);
     setMessages([{ who: "bot", text: initialGreeting }]);
     setFrom(`web-${businessId || "default"}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
     setContactNeeded(false);
     setContactCaptured(false);
+    setSelectedServiceName("");
     setLeadError("");
   }
 
@@ -389,6 +426,26 @@ function PublicWidget({ businessId }) {
     if (window.location.hash === "#chat") setIsOpen(true);
     return () => window.removeEventListener("autochat:open", openHandler);
   }, [defaults]);
+
+  function updateSelectedService(text = "") {
+    const explicit = String(text).match(/Servicio:\s*([^\n]+)/i) || String(text).match(/Has seleccionado:\s*([^\n]+)/i);
+    if (explicit?.[1]) {
+      setSelectedServiceName(explicit[1].trim());
+      return;
+    }
+    const normalized = normalizeText(text);
+    const match = (defaults.services || []).find((service) => normalized.includes(normalizeText(service.name)));
+    if (match) setSelectedServiceName(match.name);
+  }
+
+  const fieldMeta = {
+    name: { placeholder: "Nombre", type: "text" },
+    phone: { placeholder: "Teléfono / WhatsApp", type: "tel" },
+    email: { placeholder: "Correo", type: "email" },
+    company: { placeholder: "Empresa", type: "text" },
+    address: { placeholder: "Dirección / ubicación", type: "text" }
+  };
+  const selectedContactFields = contactFieldsForService(defaults.services || [], selectedServiceName);
 
   function shouldAskContact(conversation) {
     if (contactCaptured) return false;
@@ -414,6 +471,8 @@ function PublicWidget({ businessId }) {
           name: leadForm.name,
           phone: leadForm.phone,
           email: leadForm.email,
+          company: leadForm.company,
+          address: leadForm.address,
           previousFrom: from,
           source: "widget_web",
           notes: "Lead capturado al final del chat"
@@ -443,6 +502,7 @@ function PublicWidget({ businessId }) {
       });
       const body = await response.json();
       setMessages((current) => [...current, { who: "bot", text: body.outboundText || "No pude responder en este momento." }]);
+      updateSelectedService(body.outboundText || "");
       if (shouldAskContact(body)) setContactNeeded(true);
     } catch {
       setMessages((current) => [...current, { who: "bot", text: "No pude conectar con el asistente. Intenta de nuevo en un momento." }]);
@@ -508,9 +568,16 @@ function PublicWidget({ businessId }) {
           <form className="react-widget-lead react-widget-contact" onSubmit={submitContact}>
             <strong>Datos de contacto</strong>
             <span>Para que el equipo pueda darte seguimiento, déjame tus datos.</span>
-            <input value={leadForm.name} onChange={(event) => setLeadForm((current) => ({ ...current, name: event.target.value }))} placeholder="Nombre" required />
-            <input value={leadForm.phone} onChange={(event) => setLeadForm((current) => ({ ...current, phone: event.target.value }))} placeholder="Teléfono / WhatsApp" required />
-            <input value={leadForm.email} onChange={(event) => setLeadForm((current) => ({ ...current, email: event.target.value }))} placeholder="Correo opcional" type="email" />
+            {selectedContactFields.map((field) => (
+              <input
+                key={field}
+                value={leadForm[field] || ""}
+                onChange={(event) => setLeadForm((current) => ({ ...current, [field]: event.target.value }))}
+                placeholder={fieldMeta[field]?.placeholder || field}
+                type={fieldMeta[field]?.type || "text"}
+                required
+              />
+            ))}
             <button type="submit">Enviar datos</button>
             {leadError && <small>{leadError}</small>}
           </form>
@@ -626,6 +693,8 @@ function buildLeadSummary(customer, format = "whatsapp") {
     `Nombre: ${customer.name || "Sin nombre"}`,
     `Teléfono: ${customer.phone || "Sin teléfono"}`,
     customer.email ? `Correo: ${customer.email}` : "",
+    customer.company ? `Empresa: ${customer.company}` : "",
+    customer.contactAddress ? `Dirección: ${customer.contactAddress}` : "",
     `Estado: ${LEAD_STATUSES.find(([value]) => value === (customer.leadStatus || "nuevo"))?.[1] || customer.leadStatus || "Nuevo"}`,
     customer.needsHuman ? "Atención: requiere seguimiento humano" : "Atención: ya marcado como atendido",
     quote ? "" : "",
@@ -778,6 +847,8 @@ function ConversationsPanel({ conversations = [], customers = [], selectedBusine
                 <span>Nombre: {selectedThread.customer?.name || "Sin nombre"}</span>
                 <span>Teléfono: {selectedThread.customer?.phone || selectedThread.from}</span>
                 <span>Email: {selectedThread.customer?.email || "Sin correo"}</span>
+                <span>Empresa: {selectedThread.customer?.company || "Sin empresa"}</span>
+                <span>Dirección: {selectedThread.customer?.contactAddress || "Sin dirección"}</span>
               </div>
 
               <div>
@@ -1070,6 +1141,7 @@ function AdminApp() {
     durationMinutes: 45,
     price: 0,
     bufferMinutes: 10,
+    contactFields: DEFAULT_CONTACT_FIELDS,
     active: true
   });
   const [faqForm, setFaqForm] = useState({ id: "", question: "", answer: "", active: true });
@@ -1352,6 +1424,7 @@ function AdminApp() {
       durationMinutes: service.durationMinutes,
       price: service.price,
       bufferMinutes: service.bufferMinutes ?? selected.defaultBufferMinutes ?? 10,
+      contactFields: parseServiceContactFields(service),
       active: service.active
     });
   }
@@ -1364,6 +1437,7 @@ function AdminApp() {
       durationMinutes: Number(serviceForm.durationMinutes),
       price: Number(serviceForm.price),
       bufferMinutes: Number(serviceForm.bufferMinutes),
+      contactFields: serviceForm.contactFields?.length ? serviceForm.contactFields : DEFAULT_CONTACT_FIELDS,
       active: Boolean(serviceForm.active)
     };
     const path = serviceForm.id
@@ -1377,7 +1451,7 @@ function AdminApp() {
     const body = await response.json();
     setNotice(response.ok ? "Servicio guardado." : body.error || "No se pudo guardar el servicio.");
     if (response.ok) {
-      setServiceForm({ id: "", name: "", durationMinutes: 45, price: 0, bufferMinutes: 10, active: true });
+      setServiceForm({ id: "", name: "", durationMinutes: 45, price: 0, bufferMinutes: 10, contactFields: DEFAULT_CONTACT_FIELDS, active: true });
       await loadData(selected.id);
     }
   }
@@ -2296,6 +2370,25 @@ function AdminApp() {
                   <small>min</small>
                 </div>
               </label>
+              <fieldset className="contact-field-options">
+                <legend>Datos que pedirá este servicio</legend>
+                {CONTACT_FIELD_OPTIONS.map(([value, label]) => (
+                  <label key={value} className="inline-check">
+                    <input
+                      type="checkbox"
+                      checked={(serviceForm.contactFields || []).includes(value)}
+                      onChange={(event) => setServiceForm((current) => ({
+                        ...current,
+                        contactFields: event.target.checked
+                          ? [...new Set([...(current.contactFields || []), value])]
+                          : (current.contactFields || []).filter((field) => field !== value)
+                      }))}
+                    />
+                    {label}
+                  </label>
+                ))}
+                <small className="field-help">Selecciona solo los datos que este servicio necesita al final del chat.</small>
+              </fieldset>
               <label className="inline-check">
                 <input
                   type="checkbox"
@@ -2311,6 +2404,7 @@ function AdminApp() {
                 <article key={service.id}>
                   <strong>{service.name}</strong>
                   <span>{selectedIsQuoteBased ? "Por cotizar según condiciones del cliente" : `${service.durationMinutes} min, $${service.price}, margen ${service.bufferMinutes ?? selected.defaultBufferMinutes} min`}</span>
+                  <small>Datos: {parseServiceContactFields(service).map((field) => CONTACT_FIELD_OPTIONS.find(([value]) => value === field)?.[1] || field).join(", ")}</small>
                   <div className="mini-actions">
                     <button type="button" onClick={() => editService(service)}>Editar</button>
                     <button type="button" onClick={() => toggleService(service)}>{service.active ? "Desactivar" : "Activar"}</button>
