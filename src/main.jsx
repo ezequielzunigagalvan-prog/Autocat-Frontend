@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   Ban,
@@ -567,6 +567,7 @@ function PublicWidget({ businessId }) {
   const [selectedServiceName, setSelectedServiceName] = useState("");
   const [selectedContactFields, setSelectedContactFields] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
+  const messagesRef = useRef(null);
 
   useEffect(() => {
     setLeadForm({ name: defaults.name, phone: defaults.phone, email: defaults.email, company: "", address: "" });
@@ -606,6 +607,18 @@ function PublicWidget({ businessId }) {
     if (window.location.hash === "#chat") setIsOpen(true);
     return () => window.removeEventListener("autochat:open", openHandler);
   }, [defaults]);
+
+  useEffect(() => {
+    if (!isOpen || !messagesRef.current) return;
+    const scrollToBottom = () => {
+      if (!messagesRef.current) return;
+      messagesRef.current.scrollTo({
+        top: messagesRef.current.scrollHeight,
+        behavior: "smooth"
+      });
+    };
+    requestAnimationFrame(scrollToBottom);
+  }, [messages, isTyping, contactNeeded, isOpen]);
 
   function updateSelectedService(text = "") {
     const explicit = String(text).match(/Servicio:\s*([^\n]+)/i) || String(text).match(/Has seleccionado:\s*([^\n]+)/i);
@@ -767,7 +780,7 @@ function PublicWidget({ businessId }) {
           </div>
           <button type="button" onClick={closePublicWidget} aria-label="Cerrar chat">×</button>
         </header>
-        <div className="react-widget-messages">
+        <div className="react-widget-messages" ref={messagesRef}>
           {messages.map((item, index) => (
             <React.Fragment key={index}>
               <p className={item.who === "me" ? "me" : "bot"}><span>{item.who === "me" ? "Tú" : defaults.title}</span>{item.text}</p>
