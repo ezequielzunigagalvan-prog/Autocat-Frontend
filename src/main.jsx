@@ -604,7 +604,7 @@ function PublicWidget({ businessId }) {
   const [from, setFrom] = useState(() => `web-${businessId || "default"}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
   const [leadError, setLeadError] = useState("");
   const [leadForm, setLeadForm] = useState({ name: defaults.name, phone: defaults.phone, email: defaults.email, company: "", address: "" });
-  const [messageText, setMessageText] = useState(defaults.prompt);
+  const [messageText, setMessageText] = useState("");
   const [messages, setMessages] = useState([{ who: "bot", text: initialGreeting }]);
   const [contactNeeded, setContactNeeded] = useState(false);
   const [contactCaptured, setContactCaptured] = useState(false);
@@ -616,7 +616,7 @@ function PublicWidget({ businessId }) {
 
   useEffect(() => {
     setLeadForm({ name: defaults.name, phone: defaults.phone, email: defaults.email, company: "", address: "" });
-    setMessageText(defaults.prompt);
+    setMessageText("");
     setMessages([{ who: "bot", text: initialGreeting }]);
     setFrom(`web-${businessId || "default"}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
     setContactNeeded(false);
@@ -630,7 +630,7 @@ function PublicWidget({ businessId }) {
 
   function resetPublicWidget() {
     setLeadForm({ name: defaults.name, phone: defaults.phone, email: defaults.email, company: "", address: "" });
-    setMessageText(defaults.prompt);
+    setMessageText("");
     setMessages([{ who: "bot", text: initialGreeting }]);
     setFrom(`web-${businessId || "default"}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
     setContactNeeded(false);
