@@ -433,9 +433,47 @@ function isDemoWidgetBusiness(businessId = "") {
   return String(businessId).startsWith("demo_");
 }
 
-function localDemoWidgetReply(businessId, text) {
+function isAppointmentDemoWidget(businessId = "") {
+  return ["demo_barberia", "demo_dental"].includes(businessId);
+}
+
+function projectDiagnosticMessages(text) {
+  const summary = text.slice(0, 180);
+  return [
+    "Perfecto. Con esa información puedo armar un ejemplo de asistente para ese negocio.",
+    `Resumen detectado:\n${summary}`,
+    "Así se vería una conversación:",
+    "Cliente: Hola, quiero información.",
+    "Bot: Claro. ¿Qué servicio te interesa y para cuándo lo necesitas?",
+    "Cliente: Quiero saber precios y disponibilidad.",
+    "Bot: Perfecto. Te pido los datos necesarios y dejo la solicitud registrada para seguimiento.",
+    "Automatizaría respuestas sobre servicios, horarios, ubicación y captura de solicitudes.",
+    "También clasificaría el lead como nuevo, interesado o requiere atención humana, y guardaría la conversación completa en el panel."
+  ];
+}
+
+function splitWidgetBotMessages(body, businessId) {
+  if (Array.isArray(body?.outboundMessages) && body.outboundMessages.length) {
+    return body.outboundMessages.map((text) => ({ who: "bot", text }));
+  }
+
+  const text = body?.outboundText || "No pude responder en este momento.";
+  if (businessId !== "demo_proyectos") return [{ who: "bot", text }];
+
+  if (text.includes("Ejemplo de conversación:") || text.includes("Resumen detectado:")) {
+    return text
+      .split(/\n{2,}|(?=Cliente:)|(?=Bot:)|(?=Qué automatizaría:)|(?=Si te interesa)/)
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .map((item) => ({ who: "bot", text: item }));
+  }
+
+  return [{ who: "bot", text }];
+}
+
+function localDemoWidgetReply(businessId, text, demoAppointmentDraft = {}) {
   const normalized = normalizeText(text);
-  const isAppointmentDemo = ["demo_barberia", "demo_dental"].includes(businessId);
+  const isAppointmentDemo = isAppointmentDemoWidget(businessId);
 
   if (businessId === "demo_proyectos") {
     if (normalized.includes("servicio")) {
@@ -468,18 +506,7 @@ function localDemoWidgetReply(businessId, text) {
       };
     }
 
-    return {
-      status: "auto_replied",
-      outboundText: [
-        "Con esa información puedo armar un flujo de ejemplo para tu negocio.",
-        "",
-        "Primero dime:",
-        "1. Qué vendes o qué servicio das",
-        "2. Qué preguntas te hacen más",
-        "3. Qué datos quieres capturar",
-        "4. Si necesitas citas, cotizaciones o solo leads"
-      ].join("\n")
-    };
+    return { status: "auto_replied", outboundMessages: projectDiagnosticMessages(text) };
   }
 
   if (isAppointmentDemo) {
@@ -494,9 +521,26 @@ function localDemoWidgetReply(businessId, text) {
       };
     }
 
+    if (/^\+?\d[\d\s-]{7,}$/.test(text.trim()) && demoAppointmentDraft.stage === "phone") {
+      return {
+        status: "appointment_confirmed",
+        nextDraft: { stage: "done" },
+        outboundText: `Cita confirmada. Te esperamos para ${demoAppointmentDraft.service || "el servicio seleccionado"} ${demoAppointmentDraft.date ? `en el horario ${demoAppointmentDraft.date}` : "en el horario solicitado"}. Confirmación enviada al teléfono ${text.trim()}.`
+      };
+    }
+
+    if (demoAppointmentDraft.stage === "datetime" || /mañana|hoy|lunes|martes|miércoles|miercoles|jueves|viernes|sábado|sabado|domingo|\d{1,2}(:\d{2})?\s*(am|pm)?/i.test(text)) {
+      return {
+        status: "auto_replied",
+        nextDraft: { ...demoAppointmentDraft, stage: "phone", date: text },
+        outboundText: "Perfecto. Tengo servicio, día y hora. Para confirmar la cita, compárteme solo tu teléfono / WhatsApp."
+      };
+    }
+
     if (normalized.includes("agendar") || normalized.includes("cita") || /\b[1-4]\b/.test(normalized)) {
       return {
         status: "auto_replied",
+        nextDraft: { stage: "datetime", service: text },
         outboundText: "Perfecto. Para esta demo puedo registrar la solicitud de cita. Dime qué día y hora te gustaría, por ejemplo: mañana a las 4 pm."
       };
     }
@@ -567,6 +611,7 @@ function PublicWidget({ businessId }) {
   const [selectedServiceName, setSelectedServiceName] = useState("");
   const [selectedContactFields, setSelectedContactFields] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
+  const [demoAppointmentDraft, setDemoAppointmentDraft] = useState({});
   const messagesRef = useRef(null);
 
   useEffect(() => {
@@ -579,6 +624,7 @@ function PublicWidget({ businessId }) {
     setSelectedServiceName("");
     setSelectedContactFields([]);
     setIsTyping(false);
+    setDemoAppointmentDraft({});
     setLeadError("");
   }, [businessId]);
 
@@ -592,6 +638,7 @@ function PublicWidget({ businessId }) {
     setSelectedServiceName("");
     setSelectedContactFields([]);
     setIsTyping(false);
+    setDemoAppointmentDraft({});
     setLeadError("");
   }
 
@@ -662,6 +709,7 @@ function PublicWidget({ businessId }) {
 
   function shouldAskContact(conversation) {
     if (contactCaptured) return false;
+    if (isAppointmentDemoWidget(businessId)) return false;
     const status = conversation?.status || "";
     const outbound = conversation?.outboundText || "";
     return (
@@ -723,15 +771,16 @@ function PublicWidget({ businessId }) {
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "No se pudo conectar con el asistente.");
       setIsTyping(false);
-      setMessages((current) => [...current, { who: "bot", text: body.outboundText || "No pude responder en este momento." }]);
+      setMessages((current) => [...current, ...splitWidgetBotMessages(body, businessId)]);
       updateContactConfig(body);
       updateSelectedService(body.outboundText || "");
       if (shouldAskContact(body)) setContactNeeded(true);
     } catch {
       setIsTyping(false);
       if (isDemoWidgetBusiness(businessId)) {
-        const fallback = localDemoWidgetReply(businessId, text);
-        setMessages((current) => [...current, { who: "bot", text: fallback.outboundText }]);
+        const fallback = localDemoWidgetReply(businessId, text, demoAppointmentDraft);
+        if (fallback.nextDraft) setDemoAppointmentDraft(fallback.nextDraft);
+        setMessages((current) => [...current, ...splitWidgetBotMessages(fallback, businessId)]);
         if (shouldAskContact(fallback)) setContactNeeded(true);
         return;
       }
