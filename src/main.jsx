@@ -1426,7 +1426,7 @@ function App() {
 function AdminApp() {
   const [token, setToken] = useState(() => localStorage.getItem("autochat_token") || "");
   const [currentUser, setCurrentUser] = useState(null);
-  const [view, setView] = useState("clients");
+  const [view, setView] = useState("conversations");
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
   const [businesses, setBusinesses] = useState([]);
   const [selectedId, setSelectedId] = useState("");
@@ -2192,20 +2192,12 @@ function AdminApp() {
         <button className="logout" type="button" onClick={logout}><LogOut size={18} /> Salir</button>
         <div className="view-switch" aria-label="Secciones">
           <button
-            className={view === "clients" ? "active" : ""}
-            type="button"
-            onClick={() => setView("clients")}
-          >
-            <BriefcaseBusiness size={18} />
-            <span>Clientes</span>
-          </button>
-          <button
             className={view === "dashboard" ? "active" : ""}
             type="button"
             onClick={() => setView("dashboard")}
           >
-            <CalendarDays size={18} />
-            <span>Dashboard</span>
+            <Bot size={18} />
+            <span>Inicio</span>
           </button>
           <button
             className={view === "conversations" ? "active" : ""}
@@ -2216,14 +2208,6 @@ function AdminApp() {
             <span>Conversaciones</span>
           </button>
           <button
-            className={view === "appointments" ? "active" : ""}
-            type="button"
-            onClick={() => setView("appointments")}
-          >
-            <CalendarDays size={18} />
-            <span>Citas</span>
-          </button>
-          <button
             className={view === "followups" ? "active" : ""}
             type="button"
             onClick={() => setView("followups")}
@@ -2232,12 +2216,28 @@ function AdminApp() {
             <span>Seguimientos</span>
           </button>
           <button
+            className={view === "appointments" ? "active" : ""}
+            type="button"
+            onClick={() => setView("appointments")}
+          >
+            <CalendarDays size={18} />
+            <span>Citas</span>
+          </button>
+          <button
             className={view === "settings" ? "active" : ""}
             type="button"
             onClick={() => setView("settings")}
           >
             <Settings size={18} />
             <span>Configuración</span>
+          </button>
+          <button
+            className={view === "clients" ? "active" : ""}
+            type="button"
+            onClick={() => setView("clients")}
+          >
+            <BriefcaseBusiness size={18} />
+            <span>Negocios</span>
           </button>
           {currentUser?.isInternalAdmin && (
             <button
@@ -2268,10 +2268,34 @@ function AdminApp() {
       <section className="content">
         <header className="topbar">
           <div>
-            <p>{view === "clients" ? "panel principal" : selected?.niche?.replace("_", " ")}</p>
-            <h1>{view === "clients" ? "Clientes y oportunidades" : view === "settings" ? "Configuración" : view === "conversations" ? "Conversaciones" : view === "appointments" ? "Citas" : view === "followups" ? "Seguimientos" : view === "internal" ? "Control interno" : selected?.name || "AutoChat"}</h1>
+            <p>
+              {view === "dashboard" && "inicio"}
+              {view === "conversations" && "bandeja de atención"}
+              {view === "followups" && "seguimiento comercial"}
+              {view === "appointments" && "agenda"}
+              {view === "settings" && "configuración"}
+              {view === "clients" && "negocios"}
+              {view === "internal" && "control interno"}
+            </p>
+            <h1>
+              {view === "dashboard" && "Inicio"}
+              {view === "conversations" && "Conversaciones"}
+              {view === "followups" && "Seguimientos"}
+              {view === "appointments" && "Citas"}
+              {view === "settings" && "Configuración"}
+              {view === "clients" && "Negocios configurados"}
+              {view === "internal" && "Control interno"}
+            </h1>
           </div>
-          <span>{view === "clients" ? "Vista general de proyectos" : view === "internal" ? "Administración privada de AutoChat" : selected?.clientNumber ? `Cliente ${String(selected.clientNumber).padStart(3, "0")} · ${selected.name}` : "Asistente web + captura de leads"}</span>
+          <span>
+            {view === "conversations"
+              ? selected?.name || "Historial de chats"
+              : view === "dashboard"
+                ? "Resumen operativo del negocio"
+                : view === "internal"
+                  ? "Administración privada de AutoChat"
+                  : selected?.name || "AutoChat"}
+          </span>
         </header>
 
         {notice && <button className="notice" onClick={() => setNotice("")}>{notice}</button>}
@@ -2457,44 +2481,42 @@ function AdminApp() {
             </div>
           </div>}
           {view === "dashboard" && <div className="panel metrics-panel">
-            <h2>Dashboard web</h2>
+            <h2><Bot size={20} /> Resumen rápido</h2>
             <div className="metrics">
               <article><strong>{dashboard?.newLeads ?? 0}</strong><span>Leads nuevos</span></article>
-              <article><strong>{dashboard?.appointmentsToday ?? 0}</strong><span>Citas hoy</span></article>
-              <article><strong>{dashboard?.upcomingAppointments ?? 0}</strong><span>Próximas citas</span></article>
-              <article><strong>{dashboard?.needsHuman ?? 0}</strong><span>Requieren humano</span></article>
-              <article><strong>{dashboard?.activeCustomers ?? 0}</strong><span>Contactos totales</span></article>
-              <article><strong>{dashboard?.conversations ?? 0}</strong><span>Mensajes registrados</span></article>
-            </div>
-            <div className="top-services">
-              {dashboard?.topServices?.map((service) => (
-                <span key={service.name}>{service.name}: {service.count}</span>
-              ))}
+              <article><strong>{dashboard?.needsHuman ?? 0}</strong><span>Atención pendiente</span></article>
+              <article><strong>{dashboard?.upcomingAppointments ?? 0}</strong><span>Citas próximas</span></article>
+              <article><strong>{followUpLeads?.filter(isFollowUpOverdue).length ?? 0}</strong><span>Seguimientos vencidos</span></article>
             </div>
           </div>}
 
-          {view === "dashboard" && <div className="panel dashboard-ops-panel">
-            <h2><Bot size={20} /> Centro de control</h2>
-            <div className="ops-grid">
+          {view === "dashboard" && <div className="panel dashboard-quick-panel">
+            <h2><Inbox size={20} /> Qué requiere atención</h2>
+            <div className="quick-dashboard-grid">
               <article>
-                <strong>Pendientes de seguimiento</strong>
-                <span>{dashboard?.needsHuman ?? 0} conversación(es) requieren respuesta humana.</span>
-                <small>Úsalo para cotizaciones, quejas o casos que el bot no debe cerrar solo.</small>
+                <strong>Conversaciones recientes</strong>
+                <span>Revisa los últimos mensajes del bot.</span>
+                <button type="button" onClick={() => setView("conversations")}>Abrir conversaciones</button>
               </article>
               <article>
-                <strong>Vista del visitante</strong>
-                <span>{settingsForm.widgetTitle || selected?.widgetTitle || "Asistente"}</span>
-                <small>{settingsForm.widgetIntro || selected?.widgetIntro || "Texto de entrada del widget"}</small>
+                <strong>Leads por atender</strong>
+                <span>{dashboard?.needsHuman ?? 0} caso(s) requieren respuesta humana.</span>
+                <button type="button" onClick={() => setView("conversations")}>Ver pendientes</button>
               </article>
               <article>
-                <strong>Agenda visual</strong>
-                <span>{dashboard?.upcomingAppointments ?? 0} cita(s) próximas y bloqueos en calendario.</span>
-                <small>Más adelante se puede conectar Google Calendar, pero por ahora el panel ya evita empalmes.</small>
+                <strong>Seguimientos</strong>
+                <span>{followUpLeads?.filter(isFollowUpOverdue).length ?? 0} seguimiento(s) vencidos.</span>
+                <button type="button" onClick={() => setView("followups")}>Abrir seguimientos</button>
+              </article>
+              <article>
+                <strong>Agenda</strong>
+                <span>{dashboard?.upcomingAppointments ?? 0} cita(s) próximas.</span>
+                <button type="button" onClick={() => setView("appointments")}>Ver citas</button>
               </article>
             </div>
           </div>}
 
-          {view === "dashboard" && <div className="panel widget-panel">
+          {view === "dashboard_legacy" && <div className="panel widget-panel">
             <h2><MessageSquareText size={20} /> Widget web</h2>
             <p className="panel-copy">Canal principal sin Twilio, Meta ni 360dialog. Inserta este código en la página del cliente para capturar leads y atender solicitudes.</p>
             <div className="link-list">
@@ -2517,7 +2539,7 @@ function AdminApp() {
             </label>
           </div>}
 
-          {view === "dashboard" && <div className="panel calendar-panel">
+          {view === "dashboard_legacy" && <div className="panel calendar-panel">
             <h2><CalendarDays size={20} /> Calendario semanal</h2>
             <div className="calendar-legend">
               <span className="legend confirmed">Confirmada</span>
@@ -2995,7 +3017,7 @@ function AdminApp() {
             </div>
           </div>}
 
-          {view === "dashboard" && <div className="panel inbox-panel">
+          {view === "dashboard_legacy" && <div className="panel inbox-panel">
             <h2><Inbox size={20} /> Bandeja de leads</h2>
             <div className="lead-filters">
               {LEAD_STATUSES.map(([value, label]) => (
@@ -3125,7 +3147,7 @@ function AdminApp() {
             )}
           </div>}
 
-          {view === "dashboard" && <div className="panel chat-panel">
+          {view === "dashboard_legacy" && <div className="panel chat-panel">
             <div className="panel-heading">
               <div>
                 <h2><MessageSquareText size={20} /> Historial de conversaciones</h2>
@@ -3187,7 +3209,7 @@ function AdminApp() {
             </div>
           </div>}
 
-          {view === "dashboard" && <div className="panel reminders-panel">
+          {view === "dashboard_legacy" && <div className="panel reminders-panel">
             <h2>Recordatorios</h2>
             <button className="run-button" type="button" onClick={runReminders}>Correr ahora</button>
             <div className="list">
@@ -3293,7 +3315,7 @@ function AdminApp() {
             </div>
           </div>}
 
-          {view === "dashboard" && <div className="panel customers-panel">
+          {view === "dashboard_legacy" && <div className="panel customers-panel">
             <h2><UserRound size={20} /> Clientes</h2>
             {customerForm.id && (
               <form className="customer-form" onSubmit={saveCustomer}>
