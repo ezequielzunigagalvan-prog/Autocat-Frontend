@@ -171,6 +171,32 @@ nav button.active, nav button:hover { background: #294139; }
   font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
   font-size: 13px;
 }
+.widget-install-card {
+  border: 1px solid #dce6df;
+  border-radius: 12px;
+  background: #fbfcfa;
+  display: grid;
+  gap: 12px;
+  margin: 16px 0;
+  padding: 14px;
+}
+.widget-install-card h3 {
+  align-items: center;
+  color: #17211d;
+  display: flex;
+  gap: 8px;
+  margin: 0;
+}
+.widget-install-card p {
+  color: #647168;
+  line-height: 1.45;
+  margin: 6px 0 0;
+}
+.widget-install-card textarea {
+  min-height: 96px;
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+}
 .client-create-panel,
 .client-list-panel,
 .recent-leads-panel {

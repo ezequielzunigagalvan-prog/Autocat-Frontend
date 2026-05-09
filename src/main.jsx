@@ -2921,6 +2921,18 @@ function AdminApp() {
               <button type="submit"><Save size={18} /> Guardar configuración</button>
             </form>
 
+            <div className="widget-install-card">
+              <div>
+                <h3><MessageSquareText size={18} /> Instalar widget web</h3>
+                <p>Copia este script y pégalo antes de cerrar el body en la página del cliente. El código ya incluye el negocio seleccionado.</p>
+              </div>
+              <label className="script-box">
+                <span>Script de {selected?.name || "este negocio"}</span>
+                <textarea readOnly value={widgetScript} aria-label="Código widget" />
+                <button type="button" onClick={() => copyText(widgetScript, "Script del widget")}><Copy size={16} /> Copiar script</button>
+              </label>
+            </div>
+
             <h3>Servicios que puede ofrecer el bot</h3>
             <p className="panel-copy">{selectedIsQuoteBased ? "En este segmento los servicios se usan para clasificar y cotizar. Precio y duración son internos/opcionales; el bot no los mostrará como definitivos." : "Cada servicio define precio, duración y margen de agenda. El cliente puede pedirlo por nombre o número."}</p>
             <form className="service-form" onSubmit={saveService}>
