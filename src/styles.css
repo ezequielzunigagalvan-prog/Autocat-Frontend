@@ -804,6 +804,40 @@ form button, .quick-actions button {
   grid-template-columns: repeat(2, minmax(120px, 1fr));
   gap: 8px;
 }
+.preset-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid #dce6df;
+  border-radius: 10px;
+  background: #f7faf6;
+  padding: 12px;
+  margin-bottom: 14px;
+}
+.preset-actions div {
+  display: grid;
+  gap: 4px;
+}
+.preset-actions strong {
+  color: #17211d;
+}
+.preset-actions span {
+  color: #647168;
+  font-size: 13px;
+  line-height: 1.35;
+}
+.preset-actions button {
+  border: 0;
+  border-radius: 8px;
+  background: #294139;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 800;
+  min-height: 40px;
+  padding: 0 14px;
+  white-space: nowrap;
+}
 .settings-form label, .service-form label, .staff-form label, .faq-form label {
   display: grid;
   gap: 6px;
@@ -1711,6 +1745,7 @@ form button, .quick-actions button {
   .topbar { align-items: flex-start; flex-direction: column; }
   .chat-form, .stack-form, .reschedule-form { grid-template-columns: 1fr; }
   .settings-form, .staff-form, .service-form, .faq-form, .customer-form { grid-template-columns: 1fr; }
+  .preset-actions { align-items: stretch; flex-direction: column; }
   .faq-form label:nth-child(2), .customer-form textarea { grid-column: 1; }
   .schedule-editor article { grid-template-columns: 1fr; }
   .reschedule-form button { grid-column: 1; }

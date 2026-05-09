@@ -273,6 +273,75 @@ const CLIENT_TEMPLATES = {
     ]
   }
 };
+const LUBRIPLAN_PRESET = {
+  niche: "industrial",
+  automationType: "lead",
+  hours: "Atención a plantas industriales con seguimiento por proyecto.",
+  tone: "consultivo, claro y profesional",
+  widgetTitle: "Asistente LubriPlan",
+  widgetIntro: "Conoce LubriPlan y solicita una implementación para tu planta.",
+  widgetInitialMessage: "Hola. Soy el asistente de LubriPlan. Puedo explicarte qué es, cómo funciona y cómo implementarlo en tu planta.\n\nTambién tenemos una promoción: implementación gratis y 3 meses de LubriPlan gratis.",
+  widgetPrompt: "",
+  widgetQuickReplies: [
+    { label: "¿Qué es LubriPlan?", value: "Qué es LubriPlan" },
+    { label: "Cómo funciona", value: "Cómo funciona LubriPlan" },
+    { label: "Promoción", value: "Promoción de implementación gratis y 3 meses gratis" },
+    { label: "Implementarlo en mi planta", value: "Quiero implementar LubriPlan en mi planta" }
+  ],
+  services: [
+    {
+      name: "Información de LubriPlan",
+      description: "LubriPlan es una plataforma para ordenar, controlar y dar seguimiento a la lubricación industrial: equipos, puntos, rutas, frecuencias, ejecuciones, evidencias y alertas.",
+      connectorEnabled: true,
+      connectorQuestion: "¿Quieres que te muestre cómo LubriPlan puede ayudarte a controlar la lubricación de tu planta?",
+      connectorCta: "Quiero conocer LubriPlan",
+      durationMinutes: 45,
+      price: 0,
+      bufferMinutes: 10,
+      contactFields: ["name", "phone", "email", "company", "position", "city", "details"]
+    },
+    {
+      name: "Implementación en planta",
+      description: "La implementación se adapta a la operación de cada planta: alta de equipos, puntos de lubricación, rutinas, responsables, frecuencias y seguimiento desde el panel.",
+      connectorEnabled: true,
+      connectorQuestion: "¿Te gustaría solicitar la implementación de LubriPlan en tu planta?",
+      connectorCta: "Solicitar implementación",
+      durationMinutes: 60,
+      price: 0,
+      bufferMinutes: 10,
+      contactFields: ["name", "phone", "email", "company", "position", "city", "equipment", "details", "urgency"]
+    },
+    {
+      name: "Promoción LubriPlan",
+      description: "Promoción disponible: implementación gratis y 3 meses de LubriPlan gratis para iniciar el control de lubricación sin costo inicial de arranque.",
+      connectorEnabled: true,
+      connectorQuestion: "¿Quieres aprovechar la promoción de implementación gratis y 3 meses de LubriPlan gratis?",
+      connectorCta: "Aprovechar promoción",
+      durationMinutes: 45,
+      price: 0,
+      bufferMinutes: 10,
+      contactFields: ["name", "phone", "email", "company", "position", "city", "details"]
+    }
+  ],
+  faqs: [
+    {
+      question: "que es lubriplan",
+      answer: "LubriPlan es una plataforma para gestionar la lubricación industrial. Ayuda a ordenar equipos, puntos de lubricación, rutas, frecuencias, responsables, evidencias y alertas para que el mantenimiento sea más controlado."
+    },
+    {
+      question: "como funciona lubriplan",
+      answer: "Funciona con un panel donde se registran equipos, puntos de lubricación y rutinas. El equipo técnico ejecuta actividades, sube evidencias y el sistema permite revisar avances, pendientes, alertas e historial."
+    },
+    {
+      question: "promocion",
+      answer: "La promoción actual incluye implementación gratis y 3 meses de LubriPlan gratis. Sirve para arrancar el control de lubricación de tu planta sin costo inicial de implementación."
+    },
+    {
+      question: "implementar lubriplan",
+      answer: "Para implementar LubriPlan se revisa la operación de tu planta, equipos, puntos de lubricación, responsables y frecuencia de mantenimiento. Si te interesa, puedo tomar tus datos para que el equipo te contacte."
+    }
+  ]
+};
 const DAYS = [
   ["1", "Lunes"],
   ["2", "Martes"],
@@ -557,16 +626,16 @@ function localDemoWidgetReply(businessId, text, demoAppointmentDraft = {}) {
 }
 
 function parseWidgetQuickReplies(value) {
-  if (Array.isArray(value)) return value.length ? value : DEFAULT_WIDGET_REPLIES;
+  if (Array.isArray(value)) return value;
   if (typeof value === "string") {
     try {
       const parsed = JSON.parse(value);
-      return Array.isArray(parsed) && parsed.length ? parsed : DEFAULT_WIDGET_REPLIES;
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
-      return DEFAULT_WIDGET_REPLIES;
+      return [];
     }
   }
-  return DEFAULT_WIDGET_REPLIES;
+  return [];
 }
 
 const widgetDefaults = {
@@ -1482,7 +1551,7 @@ function AdminApp() {
   const [manualReply, setManualReply] = useState({ customerId: "", text: "" });
   const [templateForm, setTemplateForm] = useState({ id: "", key: "", name: "", body: "", active: true });
   const [staffForm, setStaffForm] = useState({ name: "", serviceIds: [] });
-  const [clientForm, setClientForm] = useState({ name: "", phone: "", address: "", template: "industrial" });
+  const [clientForm, setClientForm] = useState({ name: "", phone: "", address: "" });
 
   const selected = useMemo(
     () => businesses.find((business) => business.id === selectedId) || businesses[0],
@@ -1731,7 +1800,7 @@ function AdminApp() {
 
   function updateWidgetQuickReply(index, field, value) {
     setSettingsForm((current) => {
-      const replies = [...(current.widgetQuickReplies || DEFAULT_WIDGET_REPLIES)];
+      const replies = [...(current.widgetQuickReplies || [])];
       replies[index] = { ...replies[index], [field]: value };
       return { ...current, widgetQuickReplies: replies };
     });
@@ -1740,20 +1809,31 @@ function AdminApp() {
   function addWidgetQuickReply() {
     setSettingsForm((current) => ({
       ...current,
-      widgetQuickReplies: [...(current.widgetQuickReplies || DEFAULT_WIDGET_REPLIES), { label: "", value: "" }].slice(0, 6)
+      widgetQuickReplies: [...(current.widgetQuickReplies || []), { label: "", value: "" }].slice(0, 6)
     }));
   }
 
   function removeWidgetQuickReply(index) {
     setSettingsForm((current) => ({
       ...current,
-      widgetQuickReplies: (current.widgetQuickReplies || DEFAULT_WIDGET_REPLIES).filter((_, itemIndex) => itemIndex !== index)
+      widgetQuickReplies: (current.widgetQuickReplies || []).filter((_, itemIndex) => itemIndex !== index)
     }));
+  }
+
+  function applyLubriPlanPreset() {
+    setSettingsForm((current) => ({
+      ...current,
+      ...LUBRIPLAN_PRESET,
+      name: current.name || selected?.name || "LubriPlan",
+      phone: current.phone || "",
+      address: current.address || "",
+      notificationEmail: current.notificationEmail || ""
+    }));
+    setNotice("Configuración LubriPlan cargada. Guarda la configuración para aplicarla al negocio seleccionado.");
   }
 
   async function createClient(event) {
     event.preventDefault();
-    const template = CLIENT_TEMPLATES[clientForm.template] || CLIENT_TEMPLATES.industrial;
     if (!clientForm.name.trim()) return;
     const response = await apiFetch("/api/businesses", {
       method: "POST",
@@ -1762,17 +1842,18 @@ function AdminApp() {
         name: clientForm.name,
         phone: clientForm.phone,
         address: clientForm.address,
-        niche: template.niche,
-        automationType: template.automationType,
-        hours: template.hours,
-        tone: template.tone,
+        niche: "servicios",
+        automationType: "lead",
+        hours: "",
+        tone: "amable y profesional",
         widgetTitle: "Asistente",
-        widgetIntro: "Deja tus datos y cuéntame qué servicio necesitas.",
-        widgetInitialMessage: template.widgetInitialMessage,
-        widgetPrompt: template.widgetPrompt,
+        widgetIntro: "",
+        widgetInitialMessage: "",
+        widgetPrompt: "",
+        widgetQuickReplies: [],
         whatsappProvider: "none",
-        services: template.services,
-        faqs: template.faqs
+        services: [],
+        faqs: []
       })
     });
     const body = await response.json();
@@ -1780,10 +1861,10 @@ function AdminApp() {
       setNotice(body.error || "No se pudo crear el cliente.");
       return;
     }
-    setClientForm({ name: "", phone: "", address: "", template: "industrial" });
+    setClientForm({ name: "", phone: "", address: "" });
     setSelectedId(body.id);
     setView("settings");
-    setNotice("Cliente creado con plantilla. Revisa su configuración antes de instalar el widget.");
+    setNotice("Cliente creado vacío. Ahora configura su asistente, servicios, respuestas y widget sin mezclarlo con otros proyectos.");
     await loadData(body.id);
   }
 
@@ -2452,12 +2533,11 @@ function AdminApp() {
 
           {view === "clients" && <div className="panel client-create-panel">
             <h2><Plus size={20} /> Nuevo cliente</h2>
-            <p className="panel-copy">Crea un espacio separado por cliente. Cada uno tendrá su configuración, widget, leads, conversaciones y agenda.</p>
+            <p className="panel-copy">Crea un espacio separado y vacío por cliente. Después configuras su asistente, servicios, respuestas, widget y reglas sin mezclarlo con otros proyectos.</p>
             <form className="client-template-form" onSubmit={createClient}>
               <label><span>Nombre del cliente</span><input value={clientForm.name} onChange={(event) => setClientForm((current) => ({ ...current, name: event.target.value }))} placeholder="Filtración y Lubricación Industrial" /></label>
               <label><span>Teléfono</span><input value={clientForm.phone} onChange={(event) => setClientForm((current) => ({ ...current, phone: event.target.value }))} placeholder="+52..." /></label>
               <label><span>Ubicación o zona</span><input value={clientForm.address} onChange={(event) => setClientForm((current) => ({ ...current, address: event.target.value }))} placeholder="Querétaro, Bajío, CDMX..." /></label>
-              <label><span>Plantilla</span><select value={clientForm.template} onChange={(event) => setClientForm((current) => ({ ...current, template: event.target.value }))}>{Object.entries(CLIENT_TEMPLATES).map(([value, template]) => <option key={value} value={value}>{template.label}</option>)}</select></label>
               <button type="submit"><Plus size={18} /> Crear cliente</button>
             </form>
           </div>}
@@ -2580,6 +2660,13 @@ function AdminApp() {
 
           {view === "settings" && <div className="panel business-panel">
             <h2>Configuración inicial</h2>
+            <div className="preset-actions">
+              <div>
+                <strong>Configuración rápida LubriPlan</strong>
+                <span>Carga mensajes, botones, servicios y respuestas para explicar LubriPlan y captar interesados en implementación.</span>
+              </div>
+              <button type="button" onClick={applyLubriPlanPreset}>Cargar LubriPlan</button>
+            </div>
             <form className="settings-form" onSubmit={saveSettings}>
               <label>
                 <span>Nombre del negocio</span>
@@ -2702,7 +2789,7 @@ function AdminApp() {
                   <button type="button" onClick={addWidgetQuickReply}>Agregar opción</button>
                   <button type="submit">Guardar respuestas</button>
                 </div>
-                {(settingsForm.widgetQuickReplies || DEFAULT_WIDGET_REPLIES).map((reply, index) => (
+                {(settingsForm.widgetQuickReplies || []).map((reply, index) => (
                   <div className="quick-reply-row" key={`reply-${index}`}>
                     <input value={reply.label || ""} onChange={(event) => updateWidgetQuickReply(index, "label", event.target.value)} placeholder="Etiqueta visible" />
                     <input value={reply.value || ""} onChange={(event) => updateWidgetQuickReply(index, "value", event.target.value)} placeholder="Mensaje que envía" />
@@ -2730,7 +2817,7 @@ function AdminApp() {
                 <div className="widget-preview-body">
                   <p>{settingsForm.widgetInitialMessage || "Hola. Puedo ayudarte con servicios, cotizaciones y atención."}</p>
                   <div className="widget-preview-options">
-                    {(settingsForm.widgetQuickReplies || DEFAULT_WIDGET_REPLIES).slice(0, 3).map((reply) => (
+                    {(settingsForm.widgetQuickReplies || []).slice(0, 3).map((reply) => (
                       <button key={reply.label || reply.value} type="button">{reply.label || "Opción"}</button>
                     ))}
                   </div>
