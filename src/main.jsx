@@ -1590,6 +1590,7 @@ function AdminApp() {
       niche: selected.niche || "servicios",
       automationType: selected.automationType || "appointment",
       phone: selected.phone || "",
+      notificationEmail: selected.notificationEmail || "",
       address: selected.address || "",
       hours: selected.hours || "",
       tone: selected.tone || "",
@@ -2575,6 +2576,11 @@ function AdminApp() {
               <label>
                 <span>Teléfono</span>
                 <input value={settingsForm.phone || ""} onChange={(event) => setSettingsForm((current) => ({ ...current, phone: event.target.value }))} />
+              </label>
+              <label>
+                <span>Correo para notificaciones</span>
+                <input value={settingsForm.notificationEmail || ""} onChange={(event) => setSettingsForm((current) => ({ ...current, notificationEmail: event.target.value }))} placeholder="correo@negocio.com" />
+                <small className="field-help">Recibe avisos cuando llegue una cotización completa o un cliente pida atención humana.</small>
               </label>
               <label>
                 <span>Dirección o sucursal</span>
