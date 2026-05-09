@@ -46,6 +46,7 @@ const PROJECTS_URL = `${FRONTEND_URL}/proyectos`;
 const DEMO_BARBERIA_URL = `${FRONTEND_URL}/demo-barberia`;
 const DEMO_DENTAL_URL = `${FRONTEND_URL}/demo-dental`;
 const ADMIN_URL = import.meta.env.VITE_ADMIN_URL || `${FRONTEND_URL}/admin`;
+const AUTOCHAT_LOGO_URL = "/autochat-logo.png";
 const LEAD_STATUSES = [
   ["all", "Todos"],
   ["nuevo", "Nuevos"],
@@ -389,7 +390,10 @@ const demoPages = {
 function PublicNav({ compact = false }) {
   return (
     <nav className="public-nav" aria-label="Navegación principal">
-      <a className="public-brand" href={LANDING_URL}>AutoChat Web</a>
+      <a className="public-brand" href={LANDING_URL}>
+        <img src={AUTOCHAT_LOGO_URL} alt="" />
+        <span>AutoChat</span>
+      </a>
       <div className="public-links">
         <a href={PROJECTS_URL}>Proyectos</a>
         <a href={`${LANDING_URL}#demos`}>Demos</a>
@@ -794,6 +798,7 @@ function PublicWidget({ businessId }) {
   }
 
   function widgetQuickReplies(text) {
+    if (businessId === "demo_proyectos") return [];
     const normalized = String(text || "").toLowerCase();
     if (normalized.includes("¿en qué puedo ayudarte") || normalized.includes("en que puedo ayudarte")) {
       const quoteMode = /cotiza|cotización|cotizacion|filtr|industrial|proyecto|renta|curso/i.test(`${defaults.prompt} ${defaults.hello}`);
@@ -822,7 +827,7 @@ function PublicWidget({ businessId }) {
       {!isOpen && <button className="react-widget-toggle" type="button" onClick={() => setIsOpen(true)}>Chat</button>}
       {isOpen && <section className="react-widget-panel" id="chat">
         <header>
-          <div className="react-widget-avatar">AI</div>
+          <div className="react-widget-avatar"><img src={AUTOCHAT_LOGO_URL} alt="" /></div>
           <div>
             <strong>{defaults.title}</strong>
             <span>{defaults.intro}</span>
@@ -935,7 +940,7 @@ function DemoPage({ page }) {
 }
 
 function PublicFooter({ label = "AutoChat Web" }) {
-  return <footer className="public-footer"><div className="public-inner"><strong>{label}</strong><span>Automatización web personalizada para negocios.</span></div></footer>;
+  return <footer className="public-footer"><div className="public-inner"><strong><img src={AUTOCHAT_LOGO_URL} alt="" />{label}</strong><span>Automatización web personalizada para negocios.</span></div></footer>;
 }
 
 function parseQuoteFromNotes(notes = "") {
@@ -2163,7 +2168,7 @@ function AdminApp() {
     return (
       <main className="login-shell">
         <form className="login-panel" onSubmit={login}>
-          <div className="brand dark"><Bot size={24} /> AutoChat</div>
+          <div className="brand dark"><img src={AUTOCHAT_LOGO_URL} alt="" /> AutoChat</div>
           <h1>Iniciar sesión</h1>
           <input
             value={loginForm.email}
@@ -2188,7 +2193,7 @@ function AdminApp() {
   return (
     <main className="shell">
       <aside className="sidebar">
-        <div className="brand"><Bot size={24} /> AutoChat</div>
+        <div className="brand"><img src={AUTOCHAT_LOGO_URL} alt="" /> AutoChat</div>
         <button className="logout" type="button" onClick={logout}><LogOut size={18} /> Salir</button>
         <div className="view-switch" aria-label="Secciones">
           <button
