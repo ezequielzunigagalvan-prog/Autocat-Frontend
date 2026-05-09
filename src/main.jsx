@@ -2192,7 +2192,7 @@ function AdminApp() {
         return new Date(a.followUpAt) - new Date(b.followUpAt);
       });
   }, [customers, followUpFilter]);
-  const widgetScript = `<script src="${API_URL}/public/widget.js?v=20260509c" data-api-url="${API_URL}" data-business-id="${selected?.id || ""}"></script>`;
+  const widgetScript = `<script src="${API_URL}/public/widget.js?v=20260509d" data-api-url="${API_URL}" data-business-id="${selected?.id || ""}"></script>`;
   const publicLinks = [
     ["Landing general", LANDING_URL],
     ["Soluciones por proyecto", PROJECTS_URL],
