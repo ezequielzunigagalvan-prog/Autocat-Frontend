@@ -87,16 +87,7 @@ const DEFAULT_WIDGET_REPLIES = [
   { label: "Solicitar cotización", value: "cotización" },
   { label: "Atención", value: "atención" }
 ];
-const PANEL_PATH = "/admin";
 const PWA_MANIFEST_ID = "autochat-panel-manifest";
-
-function hasStoredPanelSession() {
-  try {
-    return Boolean(localStorage.getItem("autochat_token"));
-  } catch {
-    return false;
-  }
-}
 
 function installPanelPwaHead() {
   if (typeof document === "undefined") return () => {};
@@ -518,6 +509,7 @@ function PublicNav({ compact = false }) {
         <a href={PROJECTS_URL}>Proyectos</a>
         <a href={`${LANDING_URL}#demos`}>Demos</a>
         {!compact && <a className="public-button" href="#contacto">Solicitar diagnóstico</a>}
+        <a className="public-login-cta" href={ADMIN_URL}>Iniciar sesión</a>
       </div>
     </nav>
   );
@@ -1542,12 +1534,7 @@ function AppointmentsPanel({
 
 function App() {
   const path = window.location.pathname.replace(/\/$/, "") || "/";
-  if ((path === "/" && hasStoredPanelSession()) || path === PANEL_PATH || window.location.hash === "#admin") {
-    if (path === "/" && window.history?.replaceState) {
-      window.history.replaceState({}, "", PANEL_PATH);
-    }
-    return <AdminApp />;
-  }
+  if (path === "/admin" || window.location.hash === "#admin") return <AdminApp />;
   if (path === "/proyectos") return <ProjectsPage />;
   if (demoPages[path]) return <DemoPage page={demoPages[path]} />;
   return <LandingPage />;

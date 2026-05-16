@@ -1889,6 +1889,13 @@ form button, .quick-actions button {
   background: rgba(255, 255, 255, 0.14);
   border: 1px solid rgba(255, 255, 255, 0.48);
 }
+.public-login-cta {
+  min-height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 8px;
+  padding: 8px 13px;
+  background: rgba(255, 255, 255, 0.1);
+}
 .public-hero-content {
   width: min(760px, 100%);
   align-self: center;
