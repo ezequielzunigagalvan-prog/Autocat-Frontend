@@ -1,9 +1,9 @@
 {
-  "name": "AutoChat",
+  "name": "AutoChat Panel",
   "short_name": "AutoChat",
-  "description": "Panel de conversaciones, leads, citas y configuración para asistentes web.",
+  "description": "Panel privado de conversaciones, leads, citas y configuracion para asistentes web.",
   "start_url": "/admin",
-  "scope": "/",
+  "scope": "/admin",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#f4f7f2",
@@ -27,11 +27,6 @@
       "name": "Panel",
       "short_name": "Panel",
       "url": "/admin"
-    },
-    {
-      "name": "Landing",
-      "short_name": "Inicio",
-      "url": "/"
     }
   ]
 }

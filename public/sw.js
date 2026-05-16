@@ -1,5 +1,5 @@
-const CACHE_NAME = "autochat-pwa-v1";
-const APP_SHELL = ["/", "/manifest.webmanifest", "/autochat-logo.png"];
+const CACHE_NAME = "autochat-panel-pwa-v2";
+const APP_SHELL = ["/admin", "/manifest.webmanifest", "/autochat-logo.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -25,7 +25,17 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (request.mode === "navigate") {
-    event.respondWith(fetch(request).catch(() => caches.match("/")));
+    if (!url.pathname.startsWith("/admin")) return;
+    event.respondWith(fetch(request).catch(() => caches.match("/admin")));
+    return;
+  }
+
+  if (
+    !url.pathname.startsWith("/admin") &&
+    !url.pathname.startsWith("/assets/") &&
+    url.pathname !== "/manifest.webmanifest" &&
+    url.pathname !== "/autochat-logo.png"
+  ) {
     return;
   }
 

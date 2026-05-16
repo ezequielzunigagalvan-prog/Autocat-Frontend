@@ -87,6 +87,57 @@ const DEFAULT_WIDGET_REPLIES = [
   { label: "Solicitar cotización", value: "cotización" },
   { label: "Atención", value: "atención" }
 ];
+const PANEL_PATH = "/admin";
+const PWA_MANIFEST_ID = "autochat-panel-manifest";
+
+function hasStoredPanelSession() {
+  try {
+    return Boolean(localStorage.getItem("autochat_token"));
+  } catch {
+    return false;
+  }
+}
+
+function installPanelPwaHead() {
+  if (typeof document === "undefined") return () => {};
+
+  let manifest = document.getElementById(PWA_MANIFEST_ID);
+  if (!manifest) {
+    manifest = document.createElement("link");
+    manifest.id = PWA_MANIFEST_ID;
+    manifest.rel = "manifest";
+    manifest.href = "/manifest.webmanifest";
+    document.head.appendChild(manifest);
+  }
+
+  return () => {
+    document.getElementById(PWA_MANIFEST_ID)?.remove();
+  };
+}
+
+function registerPanelServiceWorker() {
+  if (!("serviceWorker" in navigator) || !import.meta.env.PROD) return undefined;
+
+  let cancelled = false;
+  const register = () => {
+    if (cancelled) return;
+    navigator.serviceWorker.register("/sw.js").catch((error) => {
+      console.warn("[pwa] service worker registration failed", error);
+    });
+  };
+
+  if (document.readyState === "complete") {
+    register();
+  } else {
+    window.addEventListener("load", register, { once: true });
+  }
+
+  return () => {
+    cancelled = true;
+    window.removeEventListener("load", register);
+  };
+}
+
 const SEGMENT_OPTIONS = [
   ["industrial", "Industrial / cotizaciones"],
   ["servicios", "Servicios generales"],
@@ -1491,7 +1542,12 @@ function AppointmentsPanel({
 
 function App() {
   const path = window.location.pathname.replace(/\/$/, "") || "/";
-  if (path === "/admin" || window.location.hash === "#admin") return <AdminApp />;
+  if ((path === "/" && hasStoredPanelSession()) || path === PANEL_PATH || window.location.hash === "#admin") {
+    if (path === "/" && window.history?.replaceState) {
+      window.history.replaceState({}, "", PANEL_PATH);
+    }
+    return <AdminApp />;
+  }
   if (path === "/proyectos") return <ProjectsPage />;
   if (demoPages[path]) return <DemoPage page={demoPages[path]} />;
   return <LandingPage />;
@@ -1500,6 +1556,7 @@ function App() {
 function AdminApp() {
   const [token, setToken] = useState(() => localStorage.getItem("autochat_token") || "");
   const [currentUser, setCurrentUser] = useState(null);
+  const [panelLoaded, setPanelLoaded] = useState(false);
   const [view, setView] = useState("conversations");
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
   const [businesses, setBusinesses] = useState([]);
@@ -1566,12 +1623,24 @@ function AdminApp() {
     return { ...extra, Authorization: `Bearer ${token}` };
   }
 
+  useEffect(() => {
+    const removePanelPwaHead = installPanelPwaHead();
+    const unregisterPanelServiceWorker = registerPanelServiceWorker();
+
+    return () => {
+      removePanelPwaHead?.();
+      unregisterPanelServiceWorker?.();
+    };
+  }, []);
+
   async function apiFetch(path, options = {}) {
     const headers = authHeaders(options.headers || {});
     const response = await fetch(`${API_URL}${path}`, { ...options, headers });
     if (response.status === 401) {
       localStorage.removeItem("autochat_token");
       setToken("");
+      setCurrentUser(null);
+      setPanelLoaded(false);
     }
     return response;
   }
@@ -1590,6 +1659,7 @@ function AdminApp() {
     }
     localStorage.setItem("autochat_token", body.token);
     setCurrentUser(body.user);
+    setPanelLoaded(false);
     setToken(body.token);
     setNotice("");
   }
@@ -1598,6 +1668,7 @@ function AdminApp() {
     localStorage.removeItem("autochat_token");
     setToken("");
     setCurrentUser(null);
+    setPanelLoaded(false);
     setInternalOverview(null);
     setBusinesses([]);
   }
@@ -1605,7 +1676,10 @@ function AdminApp() {
   async function loadData(businessId = selected?.id) {
     if (!token) return;
     const profileRes = await apiFetch("/api/auth/me");
-    if (!profileRes.ok) return;
+    if (!profileRes.ok) {
+      setPanelLoaded(false);
+      return;
+    }
     const profile = await profileRes.json();
     setCurrentUser(profile.user);
 
@@ -1640,6 +1714,7 @@ function AdminApp() {
     setReminders(await remindersRes.json());
     setCalendar(await calendarRes.json());
     setInternalOverview(await internalRes.json());
+    setPanelLoaded(true);
   }
 
   useEffect(() => {
@@ -2250,23 +2325,56 @@ function AdminApp() {
       <main className="login-shell">
         <form className="login-panel" onSubmit={login}>
           <div className="brand dark"><img src={AUTOCHAT_LOGO_URL} alt="" /> AutoChat</div>
-          <h1>Iniciar sesión</h1>
+          <h1>Panel privado</h1>
+          <p>Ingresa con el usuario asignado a tu proyecto. Cada cuenta solo puede ver sus conversaciones, citas y configuracion.</p>
           <input
             value={loginForm.email}
             onChange={(event) => setLoginForm((current) => ({ ...current, email: event.target.value }))}
             aria-label="Correo"
+            autoComplete="email"
+            inputMode="email"
+            placeholder="correo@negocio.com"
+            required
           />
           <input
             type="password"
             value={loginForm.password}
             onChange={(event) => setLoginForm((current) => ({ ...current, password: event.target.value }))}
             aria-label="Contraseña"
+            autoComplete="current-password"
+            placeholder="Contraseña"
+            required
           />
           <button type="submit">Entrar</button>
-          <p>Acceso privado para usuarios autorizados.</p>
-          <a className="public-login-link" href={LANDING_URL}>Volver a la landing</a>
+          <small className="security-note">Sesion protegida con token privado. Si no tienes acceso, solicita que te asignen a tu proyecto.</small>
           {notice && <span>{notice}</span>}
         </form>
+      </main>
+    );
+  }
+
+  if (!currentUser || !panelLoaded) {
+    return (
+      <main className="login-shell">
+        <section className="login-panel">
+          <div className="brand dark"><img src={AUTOCHAT_LOGO_URL} alt="" /> AutoChat</div>
+          <h1>Cargando panel</h1>
+          <p>Estamos validando tu sesion y los proyectos asignados.</p>
+        </section>
+      </main>
+    );
+  }
+
+  if (!businesses.length) {
+    return (
+      <main className="login-shell">
+        <section className="login-panel no-project-panel">
+          <div className="brand dark"><img src={AUTOCHAT_LOGO_URL} alt="" /> AutoChat</div>
+          <h1>Sin proyecto activo</h1>
+          <p>Tu usuario existe, pero no tiene ningun proyecto asignado. Esto puede pasar si el proyecto fue eliminado o si aun no se te ha dado acceso.</p>
+          <button type="button" onClick={logout}>Cerrar sesion</button>
+          <a className="public-login-link" href={LANDING_URL}>Ir a AutoChat</a>
+        </section>
       </main>
     );
   }
@@ -3459,11 +3567,3 @@ function AdminApp() {
 }
 
 createRoot(document.getElementById("root")).render(<App />);
-
-if ("serviceWorker" in navigator && import.meta.env.PROD) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch((error) => {
-      console.warn("[pwa] service worker registration failed", error);
-    });
-  });
-}
