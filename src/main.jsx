@@ -1605,10 +1605,19 @@ function AdminApp() {
   const selectedIsQuoteBased = selectedAutomationType
     ? ["quote", "hybrid"].includes(selectedAutomationType)
     : QUOTE_SEGMENTS.includes(settingsForm.niche || selected?.niche);
+  const selectedUsesAppointments = selectedAutomationType
+    ? ["appointment", "hybrid"].includes(selectedAutomationType)
+    : !QUOTE_SEGMENTS.includes(settingsForm.niche || selected?.niche);
 
   function authHeaders(extra = {}) {
     return { ...extra, Authorization: `Bearer ${token}` };
   }
+
+  useEffect(() => {
+    if (view === "appointments" && !selectedUsesAppointments) {
+      setView("conversations");
+    }
+  }, [selectedUsesAppointments, view]);
 
   useEffect(() => {
     const removePanelPwaHead = installPanelPwaHead();
@@ -2396,14 +2405,16 @@ function AdminApp() {
             <Clock size={18} />
             <span>Seguimientos</span>
           </button>
-          <button
-            className={view === "appointments" ? "active" : ""}
-            type="button"
-            onClick={() => setView("appointments")}
-          >
-            <CalendarDays size={18} />
-            <span>Citas</span>
-          </button>
+          {selectedUsesAppointments && (
+            <button
+              className={view === "appointments" ? "active" : ""}
+              type="button"
+              onClick={() => setView("appointments")}
+            >
+              <CalendarDays size={18} />
+              <span>Citas</span>
+            </button>
+          )}
           <button
             className={view === "settings" ? "active" : ""}
             type="button"
@@ -2665,7 +2676,10 @@ function AdminApp() {
             <div className="metrics">
               <article><strong>{dashboard?.newLeads ?? 0}</strong><span>Leads nuevos</span></article>
               <article><strong>{dashboard?.needsHuman ?? 0}</strong><span>Atención pendiente</span></article>
-              <article><strong>{dashboard?.upcomingAppointments ?? 0}</strong><span>Citas próximas</span></article>
+              <article>
+                <strong>{selectedUsesAppointments ? (dashboard?.upcomingAppointments ?? 0) : (dashboard?.needsHuman ?? 0)}</strong>
+                <span>{selectedUsesAppointments ? "Citas próximas" : "Solicitudes pendientes"}</span>
+              </article>
               <article><strong>{followUpLeads?.filter(isFollowUpOverdue).length ?? 0}</strong><span>Seguimientos vencidos</span></article>
             </div>
           </div>}
@@ -2689,9 +2703,15 @@ function AdminApp() {
                 <button type="button" onClick={() => setView("followups")}>Abrir seguimientos</button>
               </article>
               <article>
-                <strong>Agenda</strong>
-                <span>{dashboard?.upcomingAppointments ?? 0} cita(s) próximas.</span>
-                <button type="button" onClick={() => setView("appointments")}>Ver citas</button>
+                <strong>{selectedUsesAppointments ? "Agenda" : "Solicitudes"}</strong>
+                <span>
+                  {selectedUsesAppointments
+                    ? `${dashboard?.upcomingAppointments ?? 0} cita(s) próximas.`
+                    : `${dashboard?.needsHuman ?? 0} solicitud(es) pendientes por revisar.`}
+                </span>
+                <button type="button" onClick={() => setView(selectedUsesAppointments ? "appointments" : "conversations")}>
+                  {selectedUsesAppointments ? "Ver citas" : "Ver solicitudes"}
+                </button>
               </article>
             </div>
           </div>}
@@ -2981,6 +3001,8 @@ function AdminApp() {
                   </label>
                 </>
               )}
+              {selectedUsesAppointments && (
+                <>
               <div className="form-section-title">Reglas para citas</div>
               <label>
                 <span>Días máximos para agendar</span>
@@ -3013,6 +3035,8 @@ function AdminApp() {
                 </div>
                 <small className="field-help">Cuando el bot encuentra horario, lo aparta mientras el cliente termina de confirmar.</small>
               </label>
+                </>
+              )}
               <button type="submit"><Save size={18} /> Guardar configuración</button>
             </form>
 
@@ -3157,8 +3181,12 @@ function AdminApp() {
               ))}
             </div>
 
-            <h3>Horarios laborales</h3>
-            <p className="panel-copy">Estos horarios sí afectan la agenda. Si un día está cerrado, el bot no debe aceptar citas ese día.</p>
+            <h3>{selectedUsesAppointments ? "Horarios laborales" : "Horario de atención"}</h3>
+            <p className="panel-copy">
+              {selectedUsesAppointments
+                ? "Estos horarios sí afectan la agenda. Si un día está cerrado, el bot no debe aceptar citas ese día."
+                : "Este horario se muestra como referencia de atención. En proyectos industriales no bloquea cotizaciones; ayuda a orientar al cliente sobre cuándo recibirá seguimiento."}
+            </p>
             <div className="schedule-editor">
               {DAYS.map(([day, label]) => {
                 const isClosed = !scheduleForm[day]?.length;
@@ -3177,8 +3205,12 @@ function AdminApp() {
               })}
             </div>
 
-            <h3><UserRound size={16} /> Personal</h3>
-            <p className="panel-copy">Asigna qué servicios puede realizar cada empleado para evitar empalmes y sugerir horarios reales.</p>
+            <h3><UserRound size={16} /> {selectedUsesAppointments ? "Personal" : "Responsables"}</h3>
+            <p className="panel-copy">
+              {selectedUsesAppointments
+                ? "Asigna qué servicios puede realizar cada empleado para evitar empalmes y sugerir horarios reales."
+                : "Registra responsables internos por servicio. En industria se usan para seguimiento comercial, no para prometer disponibilidad automática."}
+            </p>
             <form className="staff-form" onSubmit={createStaff}>
               <label>
                 <span>Nombre del empleado</span>
