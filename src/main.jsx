@@ -1116,6 +1116,7 @@ function buildLeadSummary(customer, format = "whatsapp") {
 function ConversationsPanel({ conversations = [], customers = [], selectedBusiness, deleteConversations }) {
   const [selectedFrom, setSelectedFrom] = useState("");
   const [selectedConversationIds, setSelectedConversationIds] = useState([]);
+  const [selectedThreadKeys, setSelectedThreadKeys] = useState([]);
 
   const conversationsByCustomer = useMemo(() => {
     const groups = {};
@@ -1163,6 +1164,10 @@ function ConversationsPanel({ conversations = [], customers = [], selectedBusine
     setSelectedConversationIds((current) => current.filter((id) => conversations.some((conversation) => conversation.id === id)));
   }, [conversations]);
 
+  useEffect(() => {
+    setSelectedThreadKeys((current) => current.filter((key) => conversationsByCustomer.some((thread) => thread.from === key)));
+  }, [conversationsByCustomer]);
+
   function getLeadStatusLabel(status) {
     const labels = {
       nuevo: "Nuevo",
@@ -1177,6 +1182,11 @@ function ConversationsPanel({ conversations = [], customers = [], selectedBusine
   const selectedQuote = getQuoteRequestInfo(selectedThread?.customer);
   const selectedThreadIds = selectedThread?.messages?.map((message) => message.id) || [];
   const allThreadSelected = selectedThreadIds.length > 0 && selectedThreadIds.every((id) => selectedConversationIds.includes(id));
+  const selectedThreadMessageIds = conversationsByCustomer
+    .filter((thread) => selectedThreadKeys.includes(thread.from))
+    .flatMap((thread) => thread.messages.map((message) => message.id));
+  const deleteTargetIds = [...new Set([...selectedConversationIds, ...selectedThreadMessageIds])];
+  const allVisibleThreadsSelected = conversationsByCustomer.length > 0 && conversationsByCustomer.every((thread) => selectedThreadKeys.includes(thread.from));
 
   function toggleConversationSelection(id) {
     setSelectedConversationIds((current) => (
@@ -1191,10 +1201,21 @@ function ConversationsPanel({ conversations = [], customers = [], selectedBusine
     });
   }
 
+  function toggleThreadSelection(key) {
+    setSelectedThreadKeys((current) => (
+      current.includes(key) ? current.filter((item) => item !== key) : [...current, key]
+    ));
+  }
+
+  function toggleAllVisibleThreads() {
+    setSelectedThreadKeys(allVisibleThreadsSelected ? [] : conversationsByCustomer.map((thread) => thread.from));
+  }
+
   async function handleDeleteSelected() {
-    if (!selectedConversationIds.length) return;
-    await deleteConversations(selectedConversationIds);
+    if (!deleteTargetIds.length) return;
+    await deleteConversations(deleteTargetIds);
     setSelectedConversationIds([]);
+    setSelectedThreadKeys([]);
   }
 
   return (
@@ -1206,11 +1227,14 @@ function ConversationsPanel({ conversations = [], customers = [], selectedBusine
             <p>Chats recibidos para {selectedBusiness?.name || "este negocio"}.</p>
           </div>
           <div className="conversation-toolbar">
+            <button type="button" onClick={toggleAllVisibleThreads} disabled={!conversationsByCustomer.length}>
+              {allVisibleThreadsSelected ? "Quitar todos" : "Seleccionar todos"}
+            </button>
             <button type="button" onClick={toggleSelectedThread} disabled={!selectedThreadIds.length}>
               {allThreadSelected ? "Quitar selección" : "Seleccionar chat"}
             </button>
-            <button type="button" className="danger" onClick={handleDeleteSelected} disabled={!selectedConversationIds.length}>
-              Borrar {selectedConversationIds.length || ""}
+            <button type="button" className="danger" onClick={handleDeleteSelected} disabled={!deleteTargetIds.length}>
+              Borrar {deleteTargetIds.length || ""}
             </button>
           </div>
         </div>
@@ -1227,14 +1251,22 @@ function ConversationsPanel({ conversations = [], customers = [], selectedBusine
           {conversationsByCustomer.map((thread) => {
             const last = thread.messages[thread.messages.length - 1];
             const isActive = selectedThread?.from === thread.from;
+            const isSelected = selectedThreadKeys.includes(thread.from);
 
             return (
               <button
                 key={thread.from}
-                className={isActive ? "conversation-item active" : "conversation-item"}
+                className={`${isActive ? "conversation-item active" : "conversation-item"} ${isSelected ? "selected" : ""}`}
                 type="button"
                 onClick={() => setSelectedFrom(thread.from)}
               >
+                <input
+                  aria-label={`Seleccionar conversación de ${thread.customer?.name || thread.from}`}
+                  checked={isSelected}
+                  onChange={() => toggleThreadSelection(thread.from)}
+                  onClick={(event) => event.stopPropagation()}
+                  type="checkbox"
+                />
                 <div className="conversation-avatar">
                   {(thread.customer?.name || thread.from || "?").slice(0, 1).toUpperCase()}
                 </div>
@@ -1415,6 +1447,8 @@ function AppointmentsPanel({
   setRescheduleForm,
   rescheduleAppointment
 }) {
+  const [calendarMode, setCalendarMode] = useState("week");
+  const [calendarCursor, setCalendarCursor] = useState(() => new Date());
   const upcoming = appointments
     .filter((item) => ["confirmed", "hold"].includes(item.status))
     .sort((a, b) => new Date(a.startsAt) - new Date(b.startsAt));
@@ -1423,24 +1457,150 @@ function AppointmentsPanel({
     .filter((item) => !["confirmed", "hold"].includes(item.status))
     .sort((a, b) => new Date(b.startsAt) - new Date(a.startsAt));
 
+  const calendarItems = [
+    ...appointments.map((item) => ({
+      id: `apt-${item.id}`,
+      type: item.status || "confirmed",
+      startsAt: item.startsAt,
+      title: item.serviceName || "Cita",
+      subtitle: `${item.customerName || "Cliente"}${item.customerPhone ? ` · ${item.customerPhone}` : ""}`
+    })),
+    ...(calendar?.blocks || []).map((item) => ({
+      id: `block-${item.id}`,
+      type: "block",
+      startsAt: item.startsAt,
+      title: item.reason || "Bloqueo",
+      subtitle: item.staff?.name || "Todo el negocio"
+    }))
+  ];
+
+  function startOfWeek(value) {
+    const date = new Date(value);
+    const day = date.getDay() || 7;
+    date.setDate(date.getDate() - day + 1);
+    date.setHours(0, 0, 0, 0);
+    return date;
+  }
+
+  function startOfMonthGrid(value) {
+    return startOfWeek(new Date(value.getFullYear(), value.getMonth(), 1));
+  }
+
+  function sameCalendarDay(a, b) {
+    return new Date(a).toDateString() === new Date(b).toDateString();
+  }
+
+  function itemsForCalendarDay(day) {
+    return calendarItems
+      .filter((item) => sameCalendarDay(item.startsAt, day))
+      .sort((a, b) => new Date(a.startsAt) - new Date(b.startsAt));
+  }
+
+  const weekDays = Array.from({ length: 7 }, (_, index) => {
+    const date = startOfWeek(calendarCursor);
+    date.setDate(date.getDate() + index);
+    return date;
+  });
+  const monthDays = Array.from({ length: 42 }, (_, index) => {
+    const date = startOfMonthGrid(calendarCursor);
+    date.setDate(date.getDate() + index);
+    return date;
+  });
+  const workHours = Array.from({ length: 12 }, (_, index) => 8 + index);
+  const currentTitle = calendarCursor.toLocaleDateString("es-MX", {
+    month: "long",
+    year: "numeric"
+  });
+
+  function moveCalendar(direction) {
+    setCalendarCursor((current) => {
+      const next = new Date(current);
+      if (calendarMode === "week") next.setDate(next.getDate() + direction * 7);
+      else next.setMonth(next.getMonth() + direction);
+      return next;
+    });
+  }
+
   return (
     <div className="appointments-layout">
       <section className="panel appointments-main-panel">
         <div className="panel-heading">
           <div>
-            <h2><CalendarDays size={20} /> Citas programadas</h2>
-            <p>Agenda de {selectedBusiness?.name || "este negocio"}.</p>
+            <h2><CalendarDays size={20} /> Calendario AutoChat</h2>
+            <p>Vista interna de agenda, bloqueos y solicitudes para {selectedBusiness?.name || "este negocio"}.</p>
+          </div>
+          <div className="calendar-controls">
+            <button type="button" onClick={() => moveCalendar(-1)}>Anterior</button>
+            <strong>{currentTitle}</strong>
+            <button type="button" onClick={() => moveCalendar(1)}>Siguiente</button>
+            <button className={calendarMode === "week" ? "active" : ""} type="button" onClick={() => setCalendarMode("week")}>Semana</button>
+            <button className={calendarMode === "month" ? "active" : ""} type="button" onClick={() => setCalendarMode("month")}>Mes</button>
           </div>
         </div>
 
-        {!upcoming.length && (
-          <div className="empty-state">
-            <CalendarX size={30} />
-            <strong>No hay citas próximas</strong>
-            <span>Cuando el asistente agende una cita, aparecerá aquí.</span>
+        <div className="calendar-legend">
+          <span className="legend confirmed">Confirmada</span>
+          <span className="legend hold">Apartada</span>
+          <span className="legend block">Bloqueo</span>
+        </div>
+
+        {calendarMode === "week" ? (
+          <div className="autochat-calendar week-view">
+            <div className="calendar-hour-head" />
+            {weekDays.map((day) => (
+              <div className="calendar-day-head" key={day.toISOString()}>
+                <strong>{day.toLocaleDateString("es-MX", { weekday: "short" })}</strong>
+                <span>{day.toLocaleDateString("es-MX", { day: "2-digit", month: "short" })}</span>
+              </div>
+            ))}
+            {workHours.map((hour) => (
+              <React.Fragment key={hour}>
+                <div className="calendar-hour">{String(hour).padStart(2, "0")}:00</div>
+                {weekDays.map((day) => {
+                  const items = itemsForCalendarDay(day).filter((item) => new Date(item.startsAt).getHours() === hour);
+                  return (
+                    <div className="calendar-cell" key={`${day.toISOString()}-${hour}`}>
+                      {items.map((item) => (
+                        <article className={`calendar-item ${item.type}`} key={item.id}>
+                          <span>{item.title}</span>
+                          <small>{new Date(item.startsAt).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })} · {item.subtitle}</small>
+                        </article>
+                      ))}
+                    </div>
+                  );
+                })}
+              </React.Fragment>
+            ))}
+          </div>
+        ) : (
+          <div className="autochat-calendar month-view">
+            {["Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom"].map((day) => <strong className="month-weekday" key={day}>{day}</strong>)}
+            {monthDays.map((day) => {
+              const outsideMonth = day.getMonth() !== calendarCursor.getMonth();
+              return (
+                <div className={outsideMonth ? "month-cell outside" : "month-cell"} key={day.toISOString()}>
+                  <span>{day.getDate()}</span>
+                  {itemsForCalendarDay(day).slice(0, 4).map((item) => (
+                    <article className={`calendar-item ${item.type}`} key={item.id}>
+                      <span>{item.title}</span>
+                      <small>{new Date(item.startsAt).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}</small>
+                    </article>
+                  ))}
+                </div>
+              );
+            })}
           </div>
         )}
 
+        {!upcoming.length && !calendarItems.length && (
+          <div className="empty-state">
+            <CalendarX size={30} />
+            <strong>No hay eventos todavía</strong>
+            <span>Cuando el asistente agende o se registre un bloqueo, aparecerá aquí.</span>
+          </div>
+        )}
+
+        <h3>Próximas citas</h3>
         <div className="appointment-list">
           {upcoming.map((appointment) => (
             <article key={appointment.id} className="appointment-card">

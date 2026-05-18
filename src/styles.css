@@ -1290,6 +1290,17 @@ form button, .quick-actions button {
   gap: 8px;
 }
 
+.conversation-item input[type="checkbox"] {
+  height: 18px;
+  margin: 0;
+  width: 18px;
+}
+
+.conversation-item.selected {
+  background: #f2f7f3;
+  border-color: #7fa18d;
+}
+
 .conversation-toolbar {
   align-items: center;
   display: flex;
@@ -1362,8 +1373,9 @@ form button, .quick-actions button {
   border-radius: 8px;
   padding: 12px;
   display: grid;
-  grid-template-columns: 42px 1fr auto;
+  grid-template-columns: 18px 42px 1fr auto;
   gap: 10px;
+  align-items: center;
   text-align: left;
   cursor: pointer;
 }
@@ -1634,6 +1646,87 @@ form button, .quick-actions button {
 .appointments-main-panel,
 .appointment-side-panel {
   min-height: 72vh;
+}
+
+.calendar-controls {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.calendar-controls button {
+  border: 1px solid #dfe5dc;
+  border-radius: 8px;
+  background: #fff;
+  color: #294139;
+  cursor: pointer;
+  font-weight: 800;
+  min-height: 36px;
+  padding: 0 12px;
+}
+
+.calendar-controls button.active {
+  background: #294139;
+  border-color: #294139;
+  color: #fff;
+}
+
+.calendar-controls strong {
+  color: #17211d;
+  min-width: 150px;
+  text-align: center;
+  text-transform: capitalize;
+}
+
+.autochat-calendar {
+  border: 1px solid #dfe5dc;
+  border-radius: 8px;
+  overflow: auto;
+  margin-bottom: 18px;
+}
+
+.autochat-calendar.week-view {
+  display: grid;
+  grid-template-columns: 64px repeat(7, minmax(145px, 1fr));
+  max-height: 620px;
+}
+
+.autochat-calendar.month-view {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(120px, 1fr));
+}
+
+.month-weekday {
+  background: #f7f9f6;
+  border-bottom: 1px solid #e6ebe4;
+  border-right: 1px solid #e6ebe4;
+  color: #526158;
+  padding: 10px;
+  text-align: center;
+}
+
+.month-cell {
+  border-bottom: 1px solid #e6ebe4;
+  border-right: 1px solid #e6ebe4;
+  min-height: 128px;
+  padding: 8px;
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  background: #fff;
+}
+
+.month-cell.outside {
+  background: #fbfcfa;
+  opacity: 0.55;
+}
+
+.month-cell > span {
+  color: #294139;
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .appointment-list {
